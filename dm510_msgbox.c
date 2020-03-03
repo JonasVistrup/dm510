@@ -16,15 +16,18 @@ static msg_t* top;
 
 asmlinkage
 int sys_dm510_msgbox_put(char *buffer, int length){
-	printk("The length is %d\n",length);
+	void* ptr;
+	msg_t* msg;
+	unsigned long flags;
+
 	if(length<0){
 		return 1;	//cant copy negative length
 	}
-	void *ptr = kmalloc(sizeof(msg_t), GFP_KERNEL);
+	ptr = kmalloc(sizeof(msg_t), GFP_KERNEL);
 	if(!ptr){
 		return 2;	//if malloc fails, malloc return a null pointer
 	}
-	msg_t* msg = ptr;
+	msg = ptr;
 	msg->previous = NULL;
 	msg->length = length;
 	ptr = kmalloc(length, GFP_KERNEL);
@@ -39,7 +42,6 @@ int sys_dm510_msgbox_put(char *buffer, int length){
 		return 5;	//If the copy could not copy all the bytes, it will return the number of failed bytes, on succes return 0
 	}
 
-	unsigned long flags;
 	local_irq_save(flags);
 	if(top==NULL){
 		top = msg;
@@ -54,29 +56,30 @@ int sys_dm510_msgbox_put(char *buffer, int length){
 asmlinkage
 int sys_dm510_msgbox_get(char *buffer, int length){
 	unsigned long flags;
+	msg_t* msg;
+	int mlength;
+
 	local_irq_save(flags);
 	if(top==NULL){
 		local_irq_restore(flags);
 		return 1;
 	}
-	msg_t* msg = top;
-	int mlength = msg->length;
+	msg = top;
+	mlength = msg->length;
 	top = msg->previous;
 
 	local_irq_restore(flags);
 
-	printk("Msg length: %d, buffer length: %d", mlength, length);
 	if(mlength>length){
-		printk("Msg length: %d	buffer length: %d",mlength, length);
 		return 2;
 	}
 
 	if(access_ok(buffer, mlength)==0){
 		return 3;
 	}
-	int copyres = copy_to_user(buffer, msg->message, mlength);
-	if(copyres!=0){
-		return 100+copyres;
+
+	if(copy_to_user(buffer, msg->message, mlength)!=0){
+		return 4;
 	}
 
 
