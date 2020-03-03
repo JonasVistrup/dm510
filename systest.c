@@ -11,8 +11,8 @@ int main(int argc, char ** arv){
 	printf("succes on put\n");
 
 	printf("Now to get\n");
-	char* buffer = "To be overwritten my friend"; //malloc(sizeof(char)*32);
-	printf("%li\n", syscall(__NR_dm510_msgbox_get, buffer, strlen(buffer)));
+	char* buffer = malloc(sizeof(char)*32);
+	printf("%li\n", syscall(__NR_dm510_msgbox_get, buffer, 32));
 	for(int i = 0; i<32 && buffer[i]!='\0'; i++){
 		printf("%c", buffer[i]);
 	}
