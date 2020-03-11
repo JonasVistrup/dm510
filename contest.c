@@ -10,14 +10,14 @@ int main(){
 	for(int i=0; i<4; i++){
 		fork();
 	}
-	int i = rand() % 100;
-	char str[3];
-	sprintf(str, "%d", i);
+	pid_t pid = getpid() % 100000;
+	char str[5];
+	sprintf(str, "%d", pid);
 	printf("%li\n", syscall(__NR_dm510_msgbox_put, str, strlen(str)));
-
-	char* buffer = malloc(sizeof(char)*4);
-	syscall(__NR_dm510_msgbox_get, buffer, 3);
-	printf("%s\n",buffer);
 	wait(NULL);
+	char* buffer = malloc(sizeof(char)*5);
+	syscall(__NR_dm510_msgbox_get, buffer, 5);
+	printf("%s\n",buffer);
+	free(buffer);
 	return 0;
 }

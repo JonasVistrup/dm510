@@ -17,5 +17,7 @@ int main(int argc, char ** arv){
 		printf("%c", buffer[i]);
 	}
 	printf("\n");
+	free(buffer);
+	return 0;
 }
 

@@ -10,7 +10,8 @@ int main(int argc, char ** arv){
 	printf("Testning GET metode\n");
 	char* buffer = malloc(sizeof(char)*32);
 	printf("%li\n", syscall(__NR_dm510_msgbox_get, buffer, 32));
-	for(int i = 0; i<32 && buffer[i]!='\0'; i++){
-		printf("%c", buffer[i]);
-	}
+
+	printf("%s\n", buffer);
+	free(buffer);
+	return 0;
 }
