@@ -3,8 +3,15 @@
 #include "linux/slab.h"
 #include "linux/uaccess.h"
 
+/*
+	Authors: Jonas Vistrup, 	jovis18
+		 Mikkel Hejsel, 	mihej18
+		 Thomas Lindal Winther,	thwin18
+*/
+
 typedef struct _msg_t msg_t;
 
+//Stack of messages
 struct _msg_t{
 	msg_t* previous;
 	int length;
@@ -14,6 +21,7 @@ struct _msg_t{
 static msg_t* top;
 
 
+//Function, which puts a message onto the stack, where the message is of length "length" and in char* "buffer"
 asmlinkage
 int sys_dm510_msgbox_put(char *buffer, int length){
 	void* ptr;
@@ -64,6 +72,7 @@ int sys_dm510_msgbox_put(char *buffer, int length){
 	return 0;
 }
 
+//Function, which pops the first element of the stack and copies its message into the "buffer", iff the buffer is big enogh to contain the message, as indicated by the "length" parameter..
 asmlinkage
 int sys_dm510_msgbox_get(char *buffer, int length){
 	unsigned long flags;
