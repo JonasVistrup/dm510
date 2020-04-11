@@ -21,7 +21,7 @@
 #include <asm/switch_to.h>
 #include <linux/cdev.h>
 #include <linux/fcntl.h>
-#include <asm/atomic.h>
+#include <linux/atomic.h>
 /* Prototypes - this would normally go in a .h file */
 static int dm510_open( struct inode*, struct file* );
 static int dm510_release( struct inode*, struct file* );
@@ -50,7 +50,7 @@ struct buffers{
 	char *buffer; //Adjustable
 	int size;
 	char *wp; //write pointer
-	static mutex mutex;
+	struct mutex mutex;
 };
 
 static struct buffers buffer0;
@@ -106,12 +106,11 @@ int __init dm510_init_module( void ) {
 	buffer0.wp = buffer0.buffer;
 	buffer1.wp = buffer1.buffer;
 
-	DECLARE_MUTEX(buffermutex0);
-	DECLARE_MUTEX(buffermutex1);
+	DEFINE_MUTEX(buffermutex0);
+	DEFINE_MUTEX(buffermutex1);
 
 	buffer0.mutex = buffermutex0;
 	buffer1.mutex = buffermutex1;
-
 
 	dm510_0.flag_write = 0;
 	dm510_1.flag_write = 0;
@@ -125,14 +124,14 @@ int __init dm510_init_module( void ) {
 	dm510_1.bufferWrite = &buffer0;
 
 	DECLARE_WAIT_QUEUE_HEAD(wq0);
-	DECLARE_WAIT_QUEUE_HEAD(rp0);
+	DECLARE_WAIT_QUEUE_HEAD(rq0);
 	DECLARE_WAIT_QUEUE_HEAD(openq0);
 	DECLARE_WAIT_QUEUE_HEAD(wq1);
-	DECLARE_WAIT_QUEUE_HEAD(wq1);
+	DECLARE_WAIT_QUEUE_HEAD(rq1);
 	DECLARE_WAIT_QUEUE_HEAD(openq1);
 
 	dm510_0.wq = wq0;
-	dm510_0.rq = rp0;
+	dm510_0.rq = rq0;
 	dm510_0.openq = openq0;
 
 	dm510_1.wq = wq1;
@@ -140,8 +139,8 @@ int __init dm510_init_module( void ) {
 	dm510_1.openq = openq1;
 
 
-	DECLARE_MUTEX(dm510mutex0);
-	DECLARE_MUTEX(dm510mutex1);
+	DEFINE_MUTEX(dm510mutex0);
+	DEFINE_MUTEX(dm510mutex1);
 	dm510_0.mutex = dm510mutex0;
 	dm510_1.mutex = dm510mutex1;
 
@@ -202,35 +201,35 @@ static int dm510_open( struct inode *inode, struct file *filp ) {
 			break;
 
 		case O_RDONLY:
-			while(!(((atomic_read(dev->number_of_readers)) < (dev->max_readers)) | (dev->max_readers==-1))){
+			while(!(((atomic_read(&dev->number_of_readers)) < (dev->max_readers)) | (dev->max_readers==-1))){
 				mutex_unlock(&dev->mutex);
 				if(filp->f_flags & O_NONBLOCK){
 					return -EAGAIN;
 				}
-				if(wait_event_interruptible(dev->openq, !dev->flag_write)){
+				if(wait_event_interruptible(dev->openq, !dev->flag_write)){ //rewrite flag
 					return -ERESTARTSYS;
 				}
 				if(mutex_lock_interruptible(&dev->mutex)){
 					return -ERESTARTSYS;
 				}
 			}
-			atomic_inc(dev->number_of_readers);
+			atomic_inc(&dev->number_of_readers);
 			break;
 
 		case O_RDWR:
-			while(!((((atomic_read(dev->number_of_readers)) < (dev->max_readers)) | (dev->max_readers==-1))& (!dev->flag_write))){
+			while(!((((atomic_read(&dev->number_of_readers)) < (dev->max_readers)) | (dev->max_readers==-1))& (!dev->flag_write))){
 				mutex_unlock(&dev->mutex);
 				if(filp->f_flags & O_NONBLOCK){
 					return -EAGAIN;
 				}
-				if(wait_event_interruptible(dev->openq, !dev->flag_write)){
+				if(wait_event_interruptible(dev->openq, !dev->flag_write)){ //rewrite flag
 					return -ERESTARTSYS;
 				}
 				if(mutex_lock_interruptible(&dev->mutex)){
 					return -ERESTARTSYS;
 				}
 			}
-			atomic_inc(dev->number_of_readers);
+			atomic_inc(&dev->number_of_readers);
 			dev->flag_write = 1;
 			break;
 	}
@@ -244,21 +243,21 @@ static int dm510_open( struct inode *inode, struct file *filp ) {
 static int dm510_release( struct inode *inode, struct file *filp ) {
 
 	struct dm510_dev* dev = filp->private_data;
-	switch(filp->flags & O_ACCMODE){
+	switch(filp->f_flags & O_ACCMODE){
 		case O_WRONLY:
 			dev->flag_write = 0;
-			wake_up(dev->openq);
+			wake_up(&dev->openq);
 			break;
 
 		case O_RDONLY:
-			atomic_dec(dev->number_of_readers);
-			wake_up(dev->openq);
+			atomic_dec(&dev->number_of_readers);
+			wake_up(&dev->openq);
 			break;
 
 		case O_RDWR:
-			atomic_dec(dev->number_of_readers);
+			atomic_dec(&dev->number_of_readers);
 			dev->flag_write = 0;
-			wake_up(dev->openq);
+			wake_up(&dev->openq);
 			break;
 	}
 	return 0;
@@ -282,7 +281,7 @@ static ssize_t dm510_write( struct file *filp, const char *buf, size_t count, lo
 
 	int failedBytes;
 
-	dm510_dev *dev = filp->private_data;
+	struct dm510_dev *dev = filp->private_data;
 	if(!access_ok(buf, count)){
 		return -EFAULT;
 	}
@@ -304,7 +303,7 @@ static ssize_t dm510_write( struct file *filp, const char *buf, size_t count, lo
 			return -ERESTARTSYS;
 		}
 	}
-	failedBytes = copy_from_user((dev->bufferWriter->wp+(*f_pos)), buf, count);
+	failedBytes = copy_from_user((dev->bufferWrite->wp+(*f_pos)), buf, count);
 	mutex_unlock(&dev->bufferWrite->mutex);
 
 	return count - failedBytes;
