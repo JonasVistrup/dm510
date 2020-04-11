@@ -21,6 +21,7 @@
 #include <asm/switch_to.h>
 #include <linux/cdev.h>
 #include <linux/fcntl.h>
+#include <asm/atomic.h>
 /* Prototypes - this would normally go in a .h file */
 static int dm510_open( struct inode*, struct file* );
 static int dm510_release( struct inode*, struct file* );
@@ -57,12 +58,12 @@ static struct buffers buffer0;
 static struct buffers buffer1;
 
 struct dm510_dev {
-	wait_queue_head_t wq, rq;
+	wait_queue_head_t wq, rq, openq;
 	struct buffers *bufferRead;
 	struct buffers *bufferWrite;
 	struct mutex mutex;
 	struct cdev cdev;
-	int number_of_readers;
+	atomic_t number_of_readers;
 	int max_readers;
 	int flag_write;
 };
@@ -104,22 +105,45 @@ int __init dm510_init_module( void ) {
 	buffer1.buffer = kmalloc(sizeof(char)*buffer1.size,GFP_KERNEL);
 	buffer0.wp = buffer0.buffer;
 	buffer1.wp = buffer1.buffer;
-	mutex_init(&buffer0.mutex);
-	mutex_init(&buffer1.mutex);
+
+	DECLARE_MUTEX(buffermutex0);
+	DECLARE_MUTEX(buffermutex1);
+
+	buffer0.mutex = buffermutex0;
+	buffer1.mutex = buffermutex1;
+
 
 	dm510_0.flag_write = 0;
 	dm510_1.flag_write = 0;
-	dm510_0.number_of_readers = 0;
-	dm510_1.number_of_readers = 0;
+	dm510_0.number_of_readers = ATOMIC_INIT(0);
+	dm510_1.number_of_readers = ATOMIC_INIT(0);
 	dm510_0.max_readers = -1;
 	dm510_1.max_readers = -1;
 	dm510_0.bufferRead = &buffer0;
 	dm510_0.bufferWrite = &buffer1;
 	dm510_1.bufferRead = &buffer1;
 	dm510_1.bufferWrite = &buffer0;
-	dm510_0.wq = DECLARE_WAIT_QUEUE_HEAD(wq);
-	mutex_init(&dm510_0.mutex);
-	mutex_inti(&dm510_1.mutex);
+
+	DECLARE_WAIT_QUEUE_HEAD(wq0);
+	DECLARE_WAIT_QUEUE_HEAD(rp0);
+	DECLARE_WAIT_QUEUE_HEAD(openq0);
+	DECLARE_WAIT_QUEUE_HEAD(wq1);
+	DECLARE_WAIT_QUEUE_HEAD(wq1);
+	DECLARE_WAIT_QUEUE_HEAD(openq1);
+
+	dm510_0.wq = wq0;
+	dm510_0.rq = rp0;
+	dm510_0.openq = openq0;
+
+	dm510_1.wq = wq1;
+	dm510_1.rq = rq1;
+	dm510_1.openq = openq1;
+
+
+	DECLARE_MUTEX(dm510mutex0);
+	DECLARE_MUTEX(dm510mutex1);
+	dm510_0.mutex = dm510mutex0;
+	dm510_1.mutex = dm510mutex1;
 
 	setup_cdev(&dm510_0,0);
 	setup_cdev(&dm510_1,1);
@@ -145,7 +169,6 @@ void __exit dm510_cleanup_module( void ) {
 
 	/* cleanup_module is never called if registering failed */
 	unregister_chrdev_region(devno, DEVICE_COUNT);
-	/* clean up code belongs here */
 
 	printk(KERN_INFO "DM510: Module unloaded.\n");
 }
@@ -158,35 +181,61 @@ static int dm510_open( struct inode *inode, struct file *filp ) {
 	dev = container_of(inode->i_cdev, struct dm510_dev, cdev);
 
 	//write or read?
+	if(mutex_lock_interruptible(&dev->mutex)){
+		return -ERESTARTSYS;
+	}
 	switch(filp->f_flags & O_ACCMODE){				//f_mode istead of f_flags
 		case O_WRONLY:
-			if(dev->flag_write){
-				return -1
-			}else{
-				dev->flag_write = 1;
+			while(dev->flag_write){
+				mutex_unlock(&dev->mutex);
+				if(filp->f_flags & O_NONBLOCK){
+					return -EAGAIN;
+				}
+				if(wait_event_interruptible(dev->openq, !dev->flag_write)){
+					return -ERESTARTSYS;
+				}
+				if(mutex_lock_interruptible(&dev->mutex)){
+					return -ERESTARTSYS;
+				}
 			}
+			dev->flag_write = 1;
 			break;
 
 		case O_RDONLY:
-			if(((dev->number_of_readers) < (dev->max_readers)) | (dev->max_readers==-1)){
-				dev->number_of_readers++;
-			}else{
-				return -1;
+			while(!(((atomic_read(dev->number_of_readers)) < (dev->max_readers)) | (dev->max_readers==-1))){
+				mutex_unlock(&dev->mutex);
+				if(filp->f_flags & O_NONBLOCK){
+					return -EAGAIN;
+				}
+				if(wait_event_interruptible(dev->openq, !dev->flag_write)){
+					return -ERESTARTSYS;
+				}
+				if(mutex_lock_interruptible(&dev->mutex)){
+					return -ERESTARTSYS;
+				}
 			}
+			atomic_inc(dev->number_of_readers);
 			break;
 
 		case O_RDWR:
-			if((((dev->number_of_reader) < (dev->max_readers)) | (dev->max_readers==-1)) & !(dev->flag_write)){
-				dev->number_of_readers++;
-				dev->flag_write = 1;
-			}else{
-				return -1;
+			while(!((((atomic_read(dev->number_of_readers)) < (dev->max_readers)) | (dev->max_readers==-1))& (!dev->flag_write))){
+				mutex_unlock(&dev->mutex);
+				if(filp->f_flags & O_NONBLOCK){
+					return -EAGAIN;
+				}
+				if(wait_event_interruptible(dev->openq, !dev->flag_write)){
+					return -ERESTARTSYS;
+				}
+				if(mutex_lock_interruptible(&dev->mutex)){
+					return -ERESTARTSYS;
+				}
 			}
+			atomic_inc(dev->number_of_readers);
+			dev->flag_write = 1;
 			break;
 	}
-
+	mutex_unlock(&dev->mutex);
 	filp->private_data = dev;
-	/* device claiming code belongs here */
 	return 0;
 }
 
@@ -195,19 +244,21 @@ static int dm510_open( struct inode *inode, struct file *filp ) {
 static int dm510_release( struct inode *inode, struct file *filp ) {
 
 	struct dm510_dev* dev = filp->private_data;
-
 	switch(filp->flags & O_ACCMODE){
 		case O_WRONLY:
 			dev->flag_write = 0;
+			wake_up(dev->openq);
 			break;
 
 		case O_RDONLY:
-			dev->number_of_readers--;
+			atomic_dec(dev->number_of_readers);
+			wake_up(dev->openq);
 			break;
 
 		case O_RDWR:
-			dev->number_of_readers--;
+			atomic_dec(dev->number_of_readers);
 			dev->flag_write = 0;
+			wake_up(dev->openq);
 			break;
 	}
 	return 0;
@@ -226,16 +277,37 @@ static ssize_t dm510_read( struct file *filp, char *buf,      /* The buffer to f
 }
 
 
-/* Called when a process writes to dev file */
-static ssize_t dm510_write( struct file *filp,
-    const char *buf,/* The buffer to get data from      */
-    size_t count,   /* The max number of bytes to write */
-    loff_t *f_pos )  /* The offset in the file           */
-{
+/* Called when a process writes to dev file, buf = The buffer to get data from. count = the max number of bytes to write. f_poss = the offset in the file */
+static ssize_t dm510_write( struct file *filp, const char *buf, size_t count, loff_t *f_pos ){
 
-	/* write code belongs here */	
-	
-	return 0; //return number of bytes written
+	int failedBytes;
+
+	dm510_dev *dev = filp->private_data;
+	if(!access_ok(buf, count)){
+		return -EFAULT;
+	}
+	if(*f_pos >= dev->bufferWrite->size){
+		return 0; //0 bytes written, since the offset is bigger than the buffer.
+	}
+	if(mutex_lock_interruptible(&dev->bufferWrite->mutex)){
+		return -ERESTARTSYS;
+	}
+	while((dev->bufferWrite->wp - dev->bufferWrite->buffer + count + (*f_pos)) > dev->bufferWrite->size){ //Buffer full
+		mutex_unlock(&dev->bufferWrite->mutex);
+		if(filp->f_flags & O_NONBLOCK){
+			return -EAGAIN;
+		}
+		if(wait_event_interruptible(dev->wq, !((dev->bufferWrite->wp - dev->bufferWrite->buffer + count + (*f_pos)) > dev->bufferWrite->size))){
+			return -ERESTARTSYS;
+		}
+		if(mutex_lock_interruptible(&dev->mutex)){
+			return -ERESTARTSYS;
+		}
+	}
+	failedBytes = copy_from_user((dev->bufferWriter->wp+(*f_pos)), buf, count);
+	mutex_unlock(&dev->bufferWrite->mutex);
+
+	return count - failedBytes;
 }
 
 /* called by system call icotl */ 
