@@ -45,37 +45,37 @@ int main(){
         	id += 1;
 
 	switch(id){
-		case 0: fd = devOpen(1,1,0);
-			printf("",id);
-			break
+		case 0: fd = devOpen(0,1,0);
+			printf("dn0, read, processor num: %d \n" ,id);
+			break;
 
-		case 1: fd = devOpen(1,1,0);
-			printf("",id);
-			break
+		case 1: fd = devOpen(0,0,1);
+			printf("dn0, write, processor num: %d \n" ,id);
+			break;
 
-		case 2: fd = devOpen(1,1,0);
-			printf("",id);
-			break
+		case 2: fd = devOpen(0,1,1);
+			printf("dn0, read and write, processor num %d \n" ,id);
+			break;
 
-		case 3: fd = devOpen(1,1,0);
-			printf("",id);
-			break
+		case 3: fd = devOpen(0,0,0);
+			printf("dn0, nothing, processor num %d \n" ,id);
+			break;
 
-		case 4: fd = devOpen(1,1,0);
-			printf("",id);
-			break
+		case 4: fd = devOpen(1,0,1);
+			printf("dn1, write, processor num %d \n" ,id);
+			break;
 
 		case 5: fd = devOpen(1,1,0);
-			printf("",id);
-			break
+			printf("dn1, read, processor num %d \n" ,id);
+			break;
 
-		case 6: fd = devOpen(1,1,0);
-			printf("",id);
-			break
+		case 6: fd = devOpen(1,1,1);
+			printf("dn1, read and wrtie, processor num %d \n" ,id);
+			break;
 
-		case 7: fd = devOpen(1,1,0);
-			printf("",id);
-			break
+		case 7: fd = devOpen(1,0,0);
+			printf("dn1, nothing, processor num %d \n" ,id);
+			break;
 
 	}
 	return 0;
