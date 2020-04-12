@@ -259,16 +259,16 @@ static int dm510_open( struct inode *inode, struct file *filp ) {
 /* Called when a process closes the device file. */
 static int dm510_release( struct inode *inode, struct file *filp ) {
 	struct dm510_dev* dev;
-	printk(KERN_ALERT "In Release\n");
+	//printk(KERN_ALERT "In Release\n");
 	dev = filp->private_data;
-	printk(KERN_ALERT "Gotten dev\n");
+	//printk(KERN_ALERT "Gotten dev\n");
 	switch(filp->f_flags & O_ACCMODE){
 		case O_WRONLY:
-			printk(KERN_ALERT "In writeonly\n");
+			//printk(KERN_ALERT "In writeonly\n");
 			dev->flag_write = 0;
-			printk(KERN_ALERT "Flag reset\n");
+			//printk(KERN_ALERT "Flag reset\n");
 			wake_up(&dev->openq);
-			printk(KERN_ALERT "wakeup called\n");
+			//printk(KERN_ALERT "wakeup called\n");
 			break;
 
 		case O_RDONLY:
