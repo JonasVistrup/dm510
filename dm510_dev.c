@@ -8,7 +8,7 @@
 
 #include <linux/module.h>
 #include <linux/init.h>
-#include <linux/slab.h>	
+#include <linux/slab.h>
 #include <linux/kernel.h>
 #include <linux/fs.h>
 #include <linux/errno.h>
@@ -35,6 +35,17 @@ long dm510_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
 #define MAX_MINOR_NUMBER 1
 
 #define DEVICE_COUNT 2
+
+#define IOC_MAGIC 'k'
+/*
+*	CB means Change buffer
+*
+*/
+
+#define IOC_B_READ_SIZE		_IOW(IOC_MAGIC, 0, int)
+#define IOC_B_WRITE_SIZE 	_IOW(IOC_MAGIC, 1, int)
+#define IOC_NUM_OF_READERS 	_IOW(IOC_MAGIC, 2, int)
+
 /* end of what really should have been in a .h file */
 
 /* file operations struct */
@@ -51,6 +62,7 @@ struct buffers{
 	int size;
 	char *wp; //write pointer
 	struct mutex mutex;
+	wait_queue_head_t wq, rq;
 };
 
 static struct buffers buffer0;
@@ -58,7 +70,7 @@ static struct buffers buffer0;
 static struct buffers buffer1;
 
 struct dm510_dev {
-	wait_queue_head_t wq, rq, openq;
+	wait_queue_head_t openq;
 	struct buffers *bufferRead;
 	struct buffers *bufferWrite;
 	struct mutex mutex;
@@ -138,12 +150,12 @@ int __init dm510_init_module( void ) {
 	dm510_1.bufferWrite = &buffer0;
 
 
-	dm510_0.wq = wq0;
-	dm510_0.rq = rq0;
+	buffer0.wq = wq0;
+	buffer0.rq = rq0;
 	dm510_0.openq = openq0;
 
-	dm510_1.wq = wq1;
-	dm510_1.rq = rq1;
+	buffer1.wq = wq1;
+	buffer1.rq = rq1;
 	dm510_1.openq = openq1;
 
 
@@ -270,19 +282,49 @@ static int dm510_release( struct inode *inode, struct file *filp ) {
 }
 
 
-/* Called when a process, which already opened the dev file, attempts to read from it. */
-static ssize_t dm510_read( struct file *filp, char *buf,      /* The buffer to fill with data     */
-    size_t count,   /* The max number of bytes to read  */
-    loff_t *f_pos )  /* The offset in the file           */
-{
+/* Called when a process, which already opened the dev file, attempts to read from it. buf = The buffer to fill with data. count = The max number of bytes to read. f_pos = The offset in the file. */
+static ssize_t dm510_read( struct file *filp, char *buf, size_t count, loff_t *f_pos ){
 
-	/* read code belongs here */
+	int failedBytes;
+	int readBytes;
+	int i;
 
-	return 0; //return number of bytes read
+	struct dm510_dev *dev = filp->private_data;
+	if(!access_ok(buf, count)){
+		return -EFAULT;
+	}
+	if(count > dev->bufferRead->size){
+		return 0;
+	}
+	if(mutex_lock_interruptible(&dev->bufferRead->mutex)){
+		return -ERESTARTSYS;
+	}
+	while(count > (dev->bufferRead->wp - dev->bufferRead->buffer)){ //Buffer full
+		mutex_unlock(&dev->bufferRead->mutex);
+		if(filp->f_flags & O_NONBLOCK){
+			return -EAGAIN;
+		}
+		if(wait_event_interruptible(dev->bufferRead->rq, !(count > (dev->bufferRead->wp - dev->bufferRead->buffer)))){
+			return -ERESTARTSYS;
+		}
+		if(mutex_lock_interruptible(&dev->bufferRead->mutex)){
+			return -ERESTARTSYS;
+		}
+	}
+	failedBytes = copy_to_user(buf, dev->bufferRead->buffer, count);
+	readBytes = count - failedBytes;
+	for(i = readBytes; i < (dev->bufferRead->wp - dev->bufferRead->buffer); i++){
+		dev->bufferRead->buffer[i-readBytes] = dev->bufferRead->buffer[i];
+	}
+	dev->bufferRead->wp -= readBytes;
+	mutex_unlock(&dev->bufferRead->mutex);
+	wake_up(&dev->bufferRead->wq);
+
+	return readBytes; //return number of bytes read
 }
 
 
-/* Called when a process writes to dev file, buf = The buffer to get data from. count = the max number of bytes to write. f_poss = the offset in the file */
+/* Called when a process writes to dev file, buf = The buffer to get data from. count = the max number of bytes to write. f_pos = the offset in the file */
 static ssize_t dm510_write( struct file *filp, const char *buf, size_t count, loff_t *f_pos ){
 
 	int failedBytes;
@@ -291,44 +333,100 @@ static ssize_t dm510_write( struct file *filp, const char *buf, size_t count, lo
 	if(!access_ok(buf, count)){
 		return -EFAULT;
 	}
-	if(*f_pos >= dev->bufferWrite->size){
+	if(count > dev->bufferWrite->size){
 		return 0; //0 bytes written, since the offset is bigger than the buffer.
 	}
 	if(mutex_lock_interruptible(&dev->bufferWrite->mutex)){
 		return -ERESTARTSYS;
 	}
-	while((dev->bufferWrite->wp - dev->bufferWrite->buffer + count + (*f_pos)) > dev->bufferWrite->size){ //Buffer full
+	while((dev->bufferWrite->wp - dev->bufferWrite->buffer + count) > dev->bufferWrite->size){ //Buffer full
 		mutex_unlock(&dev->bufferWrite->mutex);
 		if(filp->f_flags & O_NONBLOCK){
 			return -EAGAIN;
 		}
-		if(wait_event_interruptible(dev->wq, !((dev->bufferWrite->wp - dev->bufferWrite->buffer + count + (*f_pos)) > dev->bufferWrite->size))){
+		if(wait_event_interruptible(dev->bufferWrite->wq, !((dev->bufferWrite->wp - dev->bufferWrite->buffer + count) > dev->bufferWrite->size))){
 			return -ERESTARTSYS;
 		}
-		if(mutex_lock_interruptible(&dev->mutex)){
+		if(mutex_lock_interruptible(&dev->bufferWrite->mutex)){
 			return -ERESTARTSYS;
 		}
 	}
-	failedBytes = copy_from_user((dev->bufferWrite->wp+(*f_pos)), buf, count);
+	failedBytes = copy_from_user(dev->bufferWrite->wp, buf, count);
+	dev->bufferWrite->wp += (count - failedBytes);
 	mutex_unlock(&dev->bufferWrite->mutex);
+	wake_up(&dev->bufferWrite->rq);
 
 	return count - failedBytes;
 }
 
-/* called by system call icotl */ 
-long dm510_ioctl( 
-    struct file *filp, 
-    unsigned int cmd,   /* command passed from the user */
-    unsigned long arg ) /* argument of the command */
-{
-	/* ioctl code belongs here */
+/* called by system call icotl, cmd =  command passed from the user. arg = argument of the command*/ 
+long dm510_ioctl(struct file *filp, unsigned int cmd, unsigned long arg ){
+	struct dm510_dev *dev = filp->private_data;
+	int i;
+	char *nBuffer;
+
+	if(!access_ok((void __user *) arg, _IOC_SIZE(cmd))){
+		return -EFAULT;
+	}
+
+	switch(cmd){
+		case IOC_B_READ_SIZE:
+			if(mutex_lock_interruptible(&dev->bufferRead->mutex)){
+				return -ERESTARTSYS;
+			}
+			if(__get_user(dev->bufferRead->size, (int __user *)arg)){
+				return -EFAULT;
+			}
+			nBuffer = kmalloc(sizeof(char)*dev->bufferRead->size, GFP_KERNEL);
+			for(i = 0; i < dev->bufferRead->size; i++){
+				nBuffer[i] = dev->bufferRead->buffer[i];
+			}
+			kfree(dev->bufferRead->buffer);
+			dev->bufferRead->buffer = nBuffer;
+			mutex_unlock(&dev->bufferRead->mutex);
+
+			wake_up(&dev->bufferRead->wq);
+			break;
+
+		case IOC_B_WRITE_SIZE:
+			if(mutex_lock_interruptible(&dev->bufferWrite->mutex)){
+				return -ERESTARTSYS;
+			}
+			if(__get_user(dev->bufferWrite->size, (int __user *)arg)){
+				return -EFAULT;
+			}
+			nBuffer = kmalloc(sizeof(char)*dev->bufferWrite->size, GFP_KERNEL);
+			for(i = 0; i < dev->bufferWrite->size; i++){
+				nBuffer[i] = dev->bufferWrite->buffer[i];
+			}
+			kfree(dev->bufferWrite->buffer);
+			dev->bufferWrite->buffer = nBuffer;
+			mutex_unlock(&dev->bufferWrite->mutex);
+
+			wake_up(&dev->bufferWrite->wq);
+			break;
+
+		case IOC_NUM_OF_READERS:
+			if(mutex_lock_interruptible(&dev->mutex)){
+				return -ERESTARTSYS;
+			}
+			if(__get_user(dev->max_readers, (int __user *)arg)){
+				return -EFAULT;
+			}
+			mutex_unlock(&dev->mutex);
+
+			wake_up(&dev->openq);
+			break;
+
+		default: return -ENOTTY;
+	}
 	printk(KERN_INFO "DM510: ioctl called.\n");
 
-	return 0; //has to be changed
+	return 0;
 }
 
 module_init( dm510_init_module );
 module_exit( dm510_cleanup_module );
 
-MODULE_AUTHOR( "...Your names here. Do not delete the three dots in the beginning." );
+MODULE_AUTHOR( "...Jonas Vistrup, Thomas Lindal Winther, Mikkel Hejsel." );
 MODULE_LICENSE( "GPL" );
