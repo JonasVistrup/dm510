@@ -103,20 +103,12 @@ int __init dm510_init_module( void ) {
 	int result;
 	dev_t dev = 0;
 
-	DEFINE_MUTEX(buffermutex0);
+/*	DEFINE_MUTEX(buffermutex0);
 	DEFINE_MUTEX(buffermutex1);
 	DEFINE_MUTEX(dm510mutex0);
-	DEFINE_MUTEX(dm510mutex1);
-
+	DEFINE_MUTEX(dm510mutex1);*/
 	static atomic_t a0 = ATOMIC_INIT(0);
 	static atomic_t a1 = ATOMIC_INIT(0);
-
-	DECLARE_WAIT_QUEUE_HEAD(wq0);
-	DECLARE_WAIT_QUEUE_HEAD(rq0);
-	DECLARE_WAIT_QUEUE_HEAD(openq0);
-	DECLARE_WAIT_QUEUE_HEAD(wq1);
-	DECLARE_WAIT_QUEUE_HEAD(rq1);
-	DECLARE_WAIT_QUEUE_HEAD(openq1);
 
 
 	dev = MKDEV(MAJOR_NUMBER, MIN_MINOR_NUMBER);
@@ -135,13 +127,18 @@ int __init dm510_init_module( void ) {
 	buffer0.wp = buffer0.buffer;
 	buffer1.wp = buffer1.buffer;
 
-	buffer0.mutex = buffermutex0;
+/*	buffer0.mutex = buffermutex0;
 	buffer1.mutex = buffermutex1;
+*/
+	mutex_init(&(buffer0.mutex));
+	mutex_init(&(buffer1.mutex));
 
 	dm510_0.flag_write = 0;
 	dm510_1.flag_write = 0;
+
 	dm510_0.number_of_readers = a0;
 	dm510_1.number_of_readers = a1;
+
 	dm510_0.max_readers = -1;
 	dm510_1.max_readers = -1;
 	dm510_0.bufferRead = &buffer0;
@@ -150,17 +147,18 @@ int __init dm510_init_module( void ) {
 	dm510_1.bufferWrite = &buffer0;
 
 
-	buffer0.wq = wq0;
-	buffer0.rq = rq0;
-	dm510_0.openq = openq0;
+	init_waitqueue_head(&(buffer0.wq));
+	init_waitqueue_head(&(buffer0.rq));
+	init_waitqueue_head(&(dm510_0.openq));
 
-	buffer1.wq = wq1;
-	buffer1.rq = rq1;
-	dm510_1.openq = openq1;
+	init_waitqueue_head(&(buffer1.wq));
+	init_waitqueue_head(&(buffer1.rq));
+	init_waitqueue_head(&(dm510_1.openq));
 
-
-	dm510_0.mutex = dm510mutex0;
-	dm510_1.mutex = dm510mutex1;
+	/*dm510_0.mutex = dm510mutex0;
+	dm510_1.mutex = dm510mutex1;*/
+	mutex_init(&(dm510_0.mutex));
+	mutex_init(&(dm510_1.mutex));
 
 	setup_cdev(&dm510_0,0);
 	setup_cdev(&dm510_1,1);
@@ -177,6 +175,7 @@ void __exit dm510_cleanup_module( void ) {
 	dev_t devno = MKDEV(MAJOR_NUMBER, MIN_MINOR_NUMBER);
 
 	/* Get rid of our char dev entries */
+	//kfree(&dm510_1.openq);
 	cdev_del(&dm510_0.cdev);
 	cdev_del(&dm510_1.cdev);
 
@@ -259,12 +258,17 @@ static int dm510_open( struct inode *inode, struct file *filp ) {
 
 /* Called when a process closes the device file. */
 static int dm510_release( struct inode *inode, struct file *filp ) {
-
-	struct dm510_dev* dev = filp->private_data;
+	struct dm510_dev* dev;
+	printk(KERN_ALERT "In Release\n");
+	dev = filp->private_data;
+	printk(KERN_ALERT "Gotten dev\n");
 	switch(filp->f_flags & O_ACCMODE){
 		case O_WRONLY:
+			printk(KERN_ALERT "In writeonly\n");
 			dev->flag_write = 0;
+			printk(KERN_ALERT "Flag reset\n");
 			wake_up(&dev->openq);
+			printk(KERN_ALERT "wakeup called\n");
 			break;
 
 		case O_RDONLY:
