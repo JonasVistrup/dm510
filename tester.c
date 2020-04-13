@@ -5,6 +5,7 @@
 #include <string.h>
 #include <linux/ioctl.h>
 #include <sys/ioctl.h>
+#include "dm510_dev.h"
 
 //Index 0|1, for dm510_0|dm510_1. read & write are booleans. write+read>=1. Returns filedescripter.
 int devOpen(int index, int read, int write){
@@ -33,10 +34,10 @@ int devOpen(int index, int read, int write){
 	}
 }
 
-#define IOC_MAGIC 'k'
-#define IOC_B_READ_SIZE _IOW(IOC_MAGIC, 0, int)
-#define IOC_B_WRITE_SIZE _IOW(IOC_MAGIC, 1, int)
-#define IOC_NUM_OF_READERS _IOW(IOC_MAGIC, 2, int)
+//#define IOC_MAGIC 'k'
+//#define IOC_B_READ_SIZE _IOW(IOC_MAGIC, 0, int)
+//#define IOC_B_WRITE_SIZE _IOW(IOC_MAGIC, 1, int)
+//#define IOC_NUM_OF_READERS _IOW(IOC_MAGIC, 2, int)
 
 
 int main()

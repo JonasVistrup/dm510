@@ -22,31 +22,14 @@
 #include <linux/cdev.h>
 #include <linux/fcntl.h>
 #include <linux/atomic.h>
+#include "dm510_dev.h"
+
 /* Prototypes - this would normally go in a .h file */
 static int dm510_open( struct inode*, struct file* );
 static int dm510_release( struct inode*, struct file* );
 static ssize_t dm510_read( struct file*, char*, size_t, loff_t* );
 static ssize_t dm510_write( struct file*, const char*, size_t, loff_t* );
 long dm510_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
-
-#define DEVICE_NAME "dm510_dev" /* Dev name as it appears in /proc/devices */
-#define MAJOR_NUMBER 254
-#define MIN_MINOR_NUMBER 0
-#define MAX_MINOR_NUMBER 1
-
-#define DEVICE_COUNT 2
-
-#define IOC_MAGIC 'k'
-/*
-*	CB means Change buffer
-*
-*/
-
-#define IOC_B_READ_SIZE		_IOW(IOC_MAGIC, 0, int)
-#define IOC_B_WRITE_SIZE 	_IOW(IOC_MAGIC, 1, int)
-#define IOC_NUM_OF_READERS 	_IOW(IOC_MAGIC, 2, int)
-
-/* end of what really should have been in a .h file */
 
 /* file operations struct */
 static struct file_operations dm510_fops = {
@@ -195,13 +178,15 @@ static int dm510_open( struct inode *inode, struct file *filp ) {
 
 	struct dm510_dev *dev;
 	dev = container_of(inode->i_cdev, struct dm510_dev, cdev);
-
+	//printk(KERN_ALERT "Past container_of\n");
 	//write or read?
 	if(mutex_lock_interruptible(&dev->mutex)){
 		return -ERESTARTSYS;
 	}
+	//printk(KERN_ALERT "Past mutex get\n");
 	switch(filp->f_flags & O_ACCMODE){				//f_mode istead of f_flags
 		case O_WRONLY:
+			//printk(KERN_ALERT "In Write only\n");
 			while(dev->flag_write){
 				mutex_unlock(&dev->mutex);
 				if(filp->f_flags & O_NONBLOCK){
@@ -218,7 +203,9 @@ static int dm510_open( struct inode *inode, struct file *filp ) {
 			break;
 
 		case O_RDONLY:
+			//printk(KERN_ALERT "read only\n");
 			while(!(((atomic_read(&dev->number_of_readers)) < (dev->max_readers)) | (dev->max_readers==-1))){
+				//printk(KERN_ALERT "In while loop\n");
 				mutex_unlock(&dev->mutex);
 				if(filp->f_flags & O_NONBLOCK){
 					return -EAGAIN;
@@ -378,9 +365,7 @@ long dm510_ioctl(struct file *filp, unsigned int cmd, unsigned long arg ){
 			if(mutex_lock_interruptible(&dev->bufferRead->mutex)){
 				return -ERESTARTSYS;
 			}
-			if(__get_user(dev->bufferRead->size, (int __user *)arg)){
-				return -EFAULT;
-			}
+			dev->bufferRead->size = arg;
 			nBuffer = kmalloc(sizeof(char)*dev->bufferRead->size, GFP_KERNEL);
 			for(i = 0; i < dev->bufferRead->size; i++){
 				nBuffer[i] = dev->bufferRead->buffer[i];
@@ -396,9 +381,10 @@ long dm510_ioctl(struct file *filp, unsigned int cmd, unsigned long arg ){
 			if(mutex_lock_interruptible(&dev->bufferWrite->mutex)){
 				return -ERESTARTSYS;
 			}
-			if(__get_user(dev->bufferWrite->size, (int __user *)arg)){
-				return -EFAULT;
-			}
+			//if(__get_user(dev->bufferWrite->size, (int __user *)arg)){
+			///	return -EFAULT;
+			//}
+			dev->bufferWrite->size = arg;
 			nBuffer = kmalloc(sizeof(char)*dev->bufferWrite->size, GFP_KERNEL);
 			for(i = 0; i < dev->bufferWrite->size; i++){
 				nBuffer[i] = dev->bufferWrite->buffer[i];
@@ -414,9 +400,7 @@ long dm510_ioctl(struct file *filp, unsigned int cmd, unsigned long arg ){
 			if(mutex_lock_interruptible(&dev->mutex)){
 				return -ERESTARTSYS;
 			}
-			if(__get_user(dev->max_readers, (int __user *)arg)){
-				return -EFAULT;
-			}
+			dev->max_readers = arg;
 			mutex_unlock(&dev->mutex);
 
 			wake_up(&dev->openq);
