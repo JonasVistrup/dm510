@@ -5,8 +5,8 @@
 #include <unistd.h>
 #include "dm510_dev.h"
 #include <linux/string.h>
-int devOpen(int index, int read, int write){
 
+int devOpen(int index, int read, int write){
 	if(index){
 		if(read && write){
 			return open("/dev/dm510-1", O_RDWR);
@@ -36,7 +36,6 @@ int main(){
 	int fd;
 	int id = 0;
 	int i;
-
 /*
 =====================
 Firs concurrent test:
@@ -47,7 +46,6 @@ Firs concurrent test:
         //Trying to write 42 charachters to fill up buffer on device 1:
 	write(fd, "012345678901234567890123456789012345678901", strlen("012345678901234567890123456789012345678901"));
         close(fd);
-
 
 	if (fork() == 0)
         	id += 4;
@@ -63,7 +61,6 @@ Firs concurrent test:
 	x One process waits 1 second before reading 8 bytes from "device 1".
 	x One process waits 1 second before reading 6 bytes from "device 1".
 	*/
-
 	char* readBuffer = malloc(sizeof(char)*42);
 
 	switch(id){
@@ -88,9 +85,7 @@ Firs concurrent test:
 			//Trying to read after 1 second:
    	         	printf("device 1\t read\t processor num: %d\t Attempting to read 6 bytes \n" ,id);
 			read(fd, readBuffer, 6);
-			if(close(fd)){
-        		   printf("file close failed\t processor num: %d\n",id);
-    			}
+			close(fd);
 			printf("device 1\t\t processor num: %d\t SUCCESFUL READ! \n" ,id);
 			break;
 
@@ -99,9 +94,7 @@ Firs concurrent test:
 			//Trying to read after 1 second:
    	         	printf("device 1\t read\t processor num: %d\t Attempting to read 6 bytes \n" ,id);
                         read(fd, readBuffer, 6);
-			if(close(fd)){
-                           printf("file close failed\t processor num: %d\n",id);
-                        }
+			close(fd);
 			printf("device 1\t\t processor num: %d\t SUCCESFUL READ! \n" ,id);
 			break;
 
@@ -110,19 +103,15 @@ Firs concurrent test:
                         //Trying to read after 1 second:
    	         	printf("device 1\t read\t processor num: %d\t Attempting to read 8 bytes \n" ,id);
                         read(fd, readBuffer, 8);
-			if(close(fd)){
-                           printf("file close failed\t processor num: %d\n",id);
-                        }
+			close(fd);
 			printf("device 1\t\t processor num: %d\t SUCCESFUL READ! \n" ,id);
 			break;
 	}
-
 	//All processor with id != 0 is terminated, so that processor 0 is the only processor left:
 	if(!id==0){
 	   free(readBuffer);
 	   return 0;
 	}
-
 	//Waiting just to make sure all process has terminated before flushing device input-buffer and freeing readBuffer.
 	sleep(2);
         fd = devOpen(1,1,0);
@@ -151,7 +140,6 @@ Second concurrent test:
 	x One process waits 1 second before writing 8 bytes to "device 1 input buffer".
 	x One process waits 1 second before writing 6 bytes to "device 1 input buffer".
 	*/
-
 	readBuffer = malloc(sizeof(char)*42);
 
 	switch(id){
@@ -159,21 +147,16 @@ Second concurrent test:
                         //Trying to read:
 			printf("device 1\t read\t processor num: %d\t Attempting to read 10 bytes \n" ,id);
                         read(fd, readBuffer, 10);
-                        if(close(fd)){
-                           printf("file close failed\t processor num: %d\n",id);
-                        }
-                        printf("device 1\t\t processor num: %d\t SUCCESFUL READ! \n" ,id);
+                        close(fd);
+			printf("device 1\t\t processor num: %d\t SUCCESFUL READ! \n" ,id);
 			break;
 
 		case 1: fd = devOpen(1,1,0);
 			//Trying to read:
                         printf("device 1\t read\t processor num: %d\t Attempting to read 10 bytes \n" ,id);
                         read(fd, readBuffer, 10);
-                        if(close(fd)){
-                           printf("file close failed\t processor num: %d\n",id);
-                        }
+                        close(fd);
                         printf("device 1\t\t processor num: %d\t SUCCESFUL READ! \n" ,id);
-
 			break;
 
 		case 2: fd = devOpen(0,0,1);
@@ -203,13 +186,11 @@ Second concurrent test:
                         printf("device 0\t\t processor num: %d\t SUCCESFUL WRITE! \n" ,id);
                         break;
 	}
-
 	//All processor with id != 0 is terminated, so that processor 0 is the only processor left:
 	if(!id==0){
 	   free(readBuffer);
 	   return 0;
 	}
-
 	sleep(2);
 	free(readBuffer);
 	printf("%s\n","");
