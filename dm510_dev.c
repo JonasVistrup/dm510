@@ -370,6 +370,7 @@ long dm510_ioctl(struct file *filp, unsigned int cmd, unsigned long arg ){
 			for(i = 0; i < dev->bufferRead->size; i++){
 				nBuffer[i] = dev->bufferRead->buffer[i];
 			}
+			dev->bufferRead->wp = nBuffer + (dev->bufferRead->wp - dev->bufferRead->buffer);
 			kfree(dev->bufferRead->buffer);
 			dev->bufferRead->buffer = nBuffer;
 			mutex_unlock(&dev->bufferRead->mutex);
@@ -389,6 +390,7 @@ long dm510_ioctl(struct file *filp, unsigned int cmd, unsigned long arg ){
 			for(i = 0; i < dev->bufferWrite->size; i++){
 				nBuffer[i] = dev->bufferWrite->buffer[i];
 			}
+			dev->bufferWrite->wp = nBuffer + (dev->bufferWrite->wp - dev->bufferWrite->buffer);
 			kfree(dev->bufferWrite->buffer);
 			dev->bufferWrite->buffer = nBuffer;
 			mutex_unlock(&dev->bufferWrite->mutex);
