@@ -210,7 +210,7 @@ static int dm510_open( struct inode *inode, struct file *filp ) {
 				if(filp->f_flags & O_NONBLOCK){
 					return -EAGAIN;
 				}
-				if(wait_event_interruptible(dev->openq, ((atomic_read(&dev->number_of_readers)) < (dev->max_readers)) | (dev->max_readers==-1) ){
+				if(wait_event_interruptible(dev->openq, ((atomic_read(&dev->number_of_readers)) < (dev->max_readers)) | (dev->max_readers==-1) )){
 					return -ERESTARTSYS;
 				}
 				if(mutex_lock_interruptible(&dev->mutex)){
@@ -226,7 +226,7 @@ static int dm510_open( struct inode *inode, struct file *filp ) {
 				if(filp->f_flags & O_NONBLOCK){
 					return -EAGAIN;
 				}
-				if(wait_event_interruptible(dev->openq, ( ((atomic_read(&dev->number_of_readers)) < (dev->max_readers)) | (dev->max_readers==-1) ) & (!dev->flag_write) ){
+				if(wait_event_interruptible(dev->openq, ( ((atomic_read(&dev->number_of_readers)) < (dev->max_readers)) | (dev->max_readers==-1) ) & (!dev->flag_write) )){
 					return -ERESTARTSYS;
 				}
 				if(mutex_lock_interruptible(&dev->mutex)){
