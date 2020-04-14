@@ -11,6 +11,8 @@
 
 int main(){
 
+	printf("\n");
+
 	// Open the writer device
     	int device_1 = open("/dev/dm510-1", O_WRONLY);
 
@@ -20,19 +22,24 @@ int main(){
     		printf("Succesfull open device_1\n");
     	}
 
-    	printf("%s\n","");
-
 	//Writning to buffer
-	int writenbytes = write(device_1, "Hello Woorld", strlen("Hello Woorld"));
-    	printf("The number of bytes written by device_1:  %d\n\n", writenbytes);
+	int writenbytes = write(device_1, "Hello World", strlen("Hello Woorld"));
+    	printf("The number of bytes written by device_1:  %d\n", writenbytes);
 
+
+	// Close the writter 
+	int deviceID1 = close(device_1);
+	if(deviceID1 < 0){
+		printf("Fail close, Error: %d\n", deviceID1);
+	}else{
+		printf("Succesfull close device_write\n");
+	}
 
 	//Open  1 read device - to change Max Readers
         int device_read = open("/dev/dm510-0", O_RDONLY);
 
         if(device_read < 0){
                 printf("Fail Open, Error: %d\n",device_read);
-                return 1;
         }else{
                 printf("Succesfull open device_read\n");
         }
@@ -48,10 +55,20 @@ int main(){
         }
 
 
+	//Close the reader device
+	int deviceIDReader = close(device_read);
+	if(deviceIDReader < 0){
+		printf("Fail close, Error %d\n", deviceIDReader);
+	}else{
+		printf("Succesfull close device_reader\n");
+	}
+
+	printf("\n");
+
 	//Creating 4 processors
 
         int readers;
-        int id;
+        int id = 0;
 
         if(fork() == 0){
                 id +4;
@@ -67,22 +84,20 @@ int main(){
                 printf("Fail Open, Error: %d\n",device_0);
                 return 1;
         }else{
-                printf("Succesfull open device_0\n");
+                printf("Processor %d 		Succesfull open device_0\n", id);
         }
 
-	// Puts the processor to sleep for 2 seconds
-	sleep(2);
-
-	char* buffer = malloc(sizeof(char)*32);
+	char* buffer = malloc(sizeof(char)*3);
 
 	//Trying to read:
     	int readbytes = read(device_0, buffer, 3);
-	printf("Processor id = %d\n", id);
-    	printf("The number of bytes read to device_0:  %d\n", readbytes);
-    	//Printing out buffer:
-    	printf("Content of buffer read from:  %s\n\n", buffer);
+	printf("Processor %d", id);
+    	printf("		The number of bytes read to device_0:  %d\n", readbytes);
 
 	free(buffer);
+
+	 // Puts the processor to sleep for 3 seconds
+        sleep(2);
 
     	//Trying to close:
     	int closeID0 = close(device_0);
@@ -90,34 +105,15 @@ int main(){
     	if(closeID0){
         	printf("Fail Close, Error: %d\n",closeID0);
     	}else{
-      	printf("Succesfull Close device_0\n");
+      	printf("Processor %d		Succesfull close device_0\n", id);
     	}
 
-	wait(NULL);
-
-	int closeID1 = close(device_1);
-
-
-    	if(closeID1){
-        	printf("Fail Close, Error: %d\n",closeID1);
-    	}else{
-     	printf("Succesfull Close device_1\n");
-    	}
+	if(id != 0){
+	   return 0;
+	}
 
     	printf("%s\n","");
-
-
-	int closeIDREAD = close(device_read);
-
-        if(closeIDREAD){
-                printf("Fail Close, Error: %d\n",closeID0);
-        }else{
-        	printf("Succesfull Close device_0\n");
-        }
-
-
-
+	sleep(4);
     	return 0;
-
 }
 
