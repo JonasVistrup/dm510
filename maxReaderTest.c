@@ -71,10 +71,10 @@ int main(){
         int id;
 
         if(fork() == 0){
-                id +4;
+                id +=2;
         }
         if(fork() == 0){
-                id +=2;
+                id +=1;
         }
 
 
