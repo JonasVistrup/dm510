@@ -42,8 +42,8 @@ Firs concurrent test:
 =====================
 */
         fd = devOpen(0,0,1);
-        printf("\n%s\n" ,"Filling device 1 input-buffer with 42 bytes of char\nDEVICE 1 INPUT-BUFFER IS NOW FULL!\n ");
-        //Trying to write 42 charachters to fill up buffer on device 1:
+        printf("\n%s\n" ,"Filling device 1 READ-buffer with 42 bytes of char\nDEVICE 1 READ-BUFFER IS NOW FULL!\n ");
+        //Trying to write 42 charachters to fill up READ-buffer on device 1:
 	write(fd, "012345678901234567890123456789012345678901", strlen("012345678901234567890123456789012345678901"));
         close(fd);
 
@@ -54,7 +54,7 @@ Firs concurrent test:
 	if (fork() == 0)
         	id += 1;
 	/*
-	x "device 1 input-buffer" gets filled with 42 bytes charachters.
+	x "device 1 READ-buffer" gets filled with 42 bytes charachters.
 	x One process tries to write 10 bytes from "device 0" to "device 1", otherwise wait.
 	x One process tries to write 10 bytes from "device 0" to "device 1", otherwise wait.
 	x One process waits 1 seconds before reading 6 bytes from "device 1".
@@ -112,11 +112,11 @@ Firs concurrent test:
 	   free(readBuffer);
 	   return 0;
 	}
-	//Waiting just to make sure all process has terminated before flushing device input-buffer and freeing readBuffer.
+	//Waiting just to make sure all process has terminated before flushing device 1 READ-buffer and freeing readBuffer.
 	sleep(2);
         fd = devOpen(1,1,0);
-        //Trying to read 42 bytes to flush out the buffer:
-	printf("\n%s\n\n","Emptying device 1 input-buffer\nDEVICE 1 INPUT-BUFFER IS NOW EMPTY!");
+        //Trying to read 42 bytes to flush out the READ-buffer:
+	printf("\n%s\n\n","Emptying device 1 READ-buffer\nDEVICE READ-BUFFER IS NOW EMPTY!");
         read(fd, readBuffer, 42);
 	free(readBuffer);
 	close(fd);
@@ -136,9 +136,9 @@ Second concurrent test:
 	x "device 1 input-buffer" is now empty.
 	x One process tries to read 10 bytes from "device 1", if empty, wait.
 	x One process tries to read 10 bytes from "device 1", if empty, wait.
-	x One process waits 1 second before writing 6 bytes to "device 1 input-buffer".
-	x One process waits 1 second before writing 8 bytes to "device 1 input buffer".
-	x One process waits 1 second before writing 6 bytes to "device 1 input buffer".
+	x One process waits 1 second before writing 6 bytes to "device 1 READ-buffer".
+	x One process waits 1 second before writing 8 bytes to "device 1 READ-buffer".
+	x One process waits 1 second before writing 6 bytes to "device 1 READ-buffer".
 	*/
 	readBuffer = malloc(sizeof(char)*42);
 
