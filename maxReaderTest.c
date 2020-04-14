@@ -25,7 +25,7 @@ int main(){
 	//Writning to buffer
 	int writenbytes = write(device_1, "Hello World", strlen("Hello Woorld"));
     	printf("The number of bytes written by device_1:  %d\n", writenbytes);
-	
+
 
 	// Close the writter 
 	int deviceID1 = close(device_1);
@@ -68,7 +68,7 @@ int main(){
 	//Creating 4 processors
 
         int readers;
-        int id;
+        int id = 0;
 
         if(fork() == 0){
                 id +4;
@@ -108,11 +108,12 @@ int main(){
       	printf("Processor %d		Succesfull close device_0\n", id);
     	}
 
-	wait(NULL);
+	if(id != 0){
+	   return 0;
+	}
 
     	printf("%s\n","");
-
+	sleep(4);
     	return 0;
-
 }
 
