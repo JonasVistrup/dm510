@@ -74,6 +74,7 @@ static void setup_cdev(struct dm510_dev *dev, int index){
 	dev->cdev.owner = THIS_MODULE;
 	dev->cdev.ops = &dm510_fops;
 	err = cdev_add (&dev->cdev, devno, 1);
+
 	/* Fail gracefully if need be */
 	if (err)
 		printk(KERN_NOTICE "Error %d adding dm510%d", err, index);
@@ -82,14 +83,9 @@ static void setup_cdev(struct dm510_dev *dev, int index){
 /* called when module is loaded */
 int __init dm510_init_module( void ) {
 
-	/* initialization code belongs here */
 	int result;
 	dev_t dev = 0;
 
-/*	DEFINE_MUTEX(buffermutex0);
-	DEFINE_MUTEX(buffermutex1);
-	DEFINE_MUTEX(dm510mutex0);
-	DEFINE_MUTEX(dm510mutex1);*/
 	static atomic_t a0 = ATOMIC_INIT(0);
 	static atomic_t a1 = ATOMIC_INIT(0);
 
@@ -101,7 +97,7 @@ int __init dm510_init_module( void ) {
 		return result;
 	}
 	/*
-	*	initialize the two drivers. DM510_0, DM510_1
+	*	initialize the two buffer and the two drivers. buffer0, buffer1, DM510_0 & DM510_1
 	*/
 	buffer0.size = 42;
 	buffer1.size = 42;
@@ -110,9 +106,6 @@ int __init dm510_init_module( void ) {
 	buffer0.wp = buffer0.buffer;
 	buffer1.wp = buffer1.buffer;
 
-/*	buffer0.mutex = buffermutex0;
-	buffer1.mutex = buffermutex1;
-*/
 	mutex_init(&(buffer0.mutex));
 	mutex_init(&(buffer1.mutex));
 
@@ -138,8 +131,6 @@ int __init dm510_init_module( void ) {
 	init_waitqueue_head(&(buffer1.rq));
 	init_waitqueue_head(&(dm510_1.openq));
 
-	/*dm510_0.mutex = dm510mutex0;
-	dm510_1.mutex = dm510mutex1;*/
 	mutex_init(&(dm510_0.mutex));
 	mutex_init(&(dm510_1.mutex));
 
@@ -158,15 +149,12 @@ void __exit dm510_cleanup_module( void ) {
 	dev_t devno = MKDEV(MAJOR_NUMBER, MIN_MINOR_NUMBER);
 
 	/* Get rid of our char dev entries */
-	//kfree(&dm510_1.openq);
 	cdev_del(&dm510_0.cdev);
 	cdev_del(&dm510_1.cdev);
 
 	kfree(buffer0.buffer);
 	kfree(buffer1.buffer);
 
-
-	/* cleanup_module is never called if registering failed */
 	unregister_chrdev_region(devno, DEVICE_COUNT);
 
 	printk(KERN_INFO "DM510: Module unloaded.\n");
@@ -178,15 +166,13 @@ static int dm510_open( struct inode *inode, struct file *filp ) {
 
 	struct dm510_dev *dev;
 	dev = container_of(inode->i_cdev, struct dm510_dev, cdev);
-	//printk(KERN_ALERT "Past container_of\n");
-	//write or read?
+
 	if(mutex_lock_interruptible(&dev->mutex)){
 		return -ERESTARTSYS;
 	}
-	//printk(KERN_ALERT "Past mutex get\n");
-	switch(filp->f_flags & O_ACCMODE){				//f_mode istead of f_flags
+
+	switch(filp->f_flags & O_ACCMODE){
 		case O_WRONLY:
-			//printk(KERN_ALERT "In Write only\n");
 			while(dev->flag_write){
 				mutex_unlock(&dev->mutex);
 				if(filp->f_flags & O_NONBLOCK){
@@ -203,9 +189,7 @@ static int dm510_open( struct inode *inode, struct file *filp ) {
 			break;
 
 		case O_RDONLY:
-			//printk(KERN_ALERT "read only\n");
 			while(!(((atomic_read(&dev->number_of_readers)) < (dev->max_readers)) | (dev->max_readers==-1))){
-				//printk(KERN_ALERT "In while loop\n");
 				mutex_unlock(&dev->mutex);
 				if(filp->f_flags & O_NONBLOCK){
 					return -EAGAIN;
@@ -246,16 +230,12 @@ static int dm510_open( struct inode *inode, struct file *filp ) {
 /* Called when a process closes the device file. */
 static int dm510_release( struct inode *inode, struct file *filp ) {
 	struct dm510_dev* dev;
-	//printk(KERN_ALERT "In Release\n");
 	dev = filp->private_data;
-	//printk(KERN_ALERT "Gotten dev\n");
+
 	switch(filp->f_flags & O_ACCMODE){
 		case O_WRONLY:
-			//printk(KERN_ALERT "In writeonly\n");
 			dev->flag_write = 0;
-			//printk(KERN_ALERT "Flag reset\n");
 			wake_up(&dev->openq);
-			//printk(KERN_ALERT "wakeup called\n");
 			break;
 
 		case O_RDONLY:
@@ -290,7 +270,7 @@ static ssize_t dm510_read( struct file *filp, char *buf, size_t count, loff_t *f
 	if(mutex_lock_interruptible(&dev->bufferRead->mutex)){
 		return -ERESTARTSYS;
 	}
-	while(count > (dev->bufferRead->wp - dev->bufferRead->buffer)){ //Buffer full
+	while(count > (dev->bufferRead->wp - dev->bufferRead->buffer)){
 		mutex_unlock(&dev->bufferRead->mutex);
 		if(filp->f_flags & O_NONBLOCK){
 			return -EAGAIN;
@@ -325,12 +305,12 @@ static ssize_t dm510_write( struct file *filp, const char *buf, size_t count, lo
 		return -EFAULT;
 	}
 	if(count > dev->bufferWrite->size){
-		return 0; //0 bytes written, since the offset is bigger than the buffer.
+		return 0;
 	}
 	if(mutex_lock_interruptible(&dev->bufferWrite->mutex)){
 		return -ERESTARTSYS;
 	}
-	while((dev->bufferWrite->wp - dev->bufferWrite->buffer + count) > dev->bufferWrite->size){ //Buffer full
+	while((dev->bufferWrite->wp - dev->bufferWrite->buffer + count) > dev->bufferWrite->size){
 		mutex_unlock(&dev->bufferWrite->mutex);
 		if(filp->f_flags & O_NONBLOCK){
 			return -EAGAIN;
@@ -350,7 +330,7 @@ static ssize_t dm510_write( struct file *filp, const char *buf, size_t count, lo
 	return count - failedBytes;
 }
 
-/* called by system call icotl, cmd =  command passed from the user. arg = argument of the command*/ 
+/* called by system call icotl, cmd =  command passed from the user. arg = argument of the command*/
 long dm510_ioctl(struct file *filp, unsigned int cmd, unsigned long arg ){
 	struct dm510_dev *dev = filp->private_data;
 	int i;
@@ -382,9 +362,6 @@ long dm510_ioctl(struct file *filp, unsigned int cmd, unsigned long arg ){
 			if(mutex_lock_interruptible(&dev->bufferWrite->mutex)){
 				return -ERESTARTSYS;
 			}
-			//if(__get_user(dev->bufferWrite->size, (int __user *)arg)){
-			///	return -EFAULT;
-			//}
 			dev->bufferWrite->size = arg;
 			nBuffer = kmalloc(sizeof(char)*dev->bufferWrite->size, GFP_KERNEL);
 			for(i = 0; i < dev->bufferWrite->size; i++){
