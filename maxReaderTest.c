@@ -25,7 +25,7 @@ int main(){
 	//Writning to buffer
 	int writenbytes = write(device_1, "Hello Woorld", strlen("Hello Woorld"));
     	printf("The number of bytes written by device_1:  %d\n\n", writenbytes);
-
+	close(device_1);
 
 	//Open  1 read device - to change Max Readers
         int device_read = open("/dev/dm510-0", O_RDONLY);
@@ -46,7 +46,7 @@ int main(){
         if(rv < 0){
                 printf("Ioctl failed");
         }
-
+	close(device_read);
 
 	//Creating 4 processors
 
@@ -95,27 +95,7 @@ int main(){
 
 	wait(NULL);
 
-	int closeID1 = close(device_1);
-
-
-    	if(closeID1){
-        	printf("Fail Close, Error: %d\n",closeID1);
-    	}else{
-     	printf("Succesfull Close device_1\n");
-    	}
-
     	printf("%s\n","");
-
-
-	int closeIDREAD = close(device_read);
-
-        if(closeIDREAD){
-                printf("Fail Close, Error: %d\n",closeID0);
-        }else{
-        	printf("Succesfull Close device_0\n");
-        }
-
-
 
     	return 0;
 
