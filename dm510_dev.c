@@ -85,7 +85,7 @@ static void setup_cdev(struct dm510_dev *dev, int index){
 int __init dm510_init_module( void ) {
 
 	int result;
-	dev_t dev = 0;
+	dev_t dev;
 
 	static atomic_t a0 = ATOMIC_INIT(0);
 	static atomic_t a1 = ATOMIC_INIT(0);
