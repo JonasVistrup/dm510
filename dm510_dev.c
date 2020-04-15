@@ -194,7 +194,7 @@ static int dm510_open( struct inode *inode, struct file *filp ) {
 				}
 				if(mutex_lock_interruptible(&dev->mutex)){			//Mutex lock acqured before continuing.
 					return -ERESTARTSYS;
-				}								//This while-loop sleep structure is repeated thorughted the program.
+				}								//This while-loop sleep structure is repeated throughout the program.
 			}
 			dev->flag_write = 1;
 			break;
