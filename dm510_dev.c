@@ -67,7 +67,7 @@ static struct dm510_dev dm510_1;
 
 
 //Initialize a character device driver, and registers them with the kernel.
-static void setup_cdev(struct dm510_dev *dev, int index){
+static void __init setup_cdev(struct dm510_dev *dev, int index){
 	int err, devno = MKDEV(MAJOR_NUMBER, MIN_MINOR_NUMBER + index);
 
 	cdev_init(&dev->cdev, &dm510_fops);
