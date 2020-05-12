@@ -3,9 +3,35 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+struct plist{
+	char* p[64]
+}
+
+
+
+struct Inode{
+	size_t size;
+	struct timespec st_atim;
+	struct timespec st_mtim;
+	struct plist* plist;
+}
+
+
+struct treeNode{
+	char* name;
+	struct Inode* inode;
+	struct treeNode** dict
+}
+
+
+FILE* fd;
+int systemSize = 1000*(1024*1024);
+
+struct treeNode* top;
 
 int lfs_getattr( const char *, struct stat * );
 int lfs_readdir( const char *, void *, fuse_fill_dir_t, off_t, struct fuse_file_info * );
+int lfs_createfile(const char *, mode_t, dev_t);
 int lfs_open( const char *, struct fuse_file_info * );
 int lfs_read( const char *, char *, size_t, off_t, struct fuse_file_info * );
 int lfs_release(const char *path, struct fuse_file_info *fi);
@@ -13,16 +39,16 @@ int lfs_release(const char *path, struct fuse_file_info *fi);
 static struct fuse_operations lfs_oper = {
 	.getattr	= lfs_getattr,
 	.readdir	= lfs_readdir,
-	.mknod = NULL,
+	.mknod		= lfs_createfile,
 	.mkdir = NULL,
-	.unlink = NULL,
+	.unlink = NULL, //Ignore
 	.rmdir = NULL,
 	.truncate = NULL,
 	.open	= lfs_open,
 	.read	= lfs_read,
 	.release = lfs_release,
 	.write = NULL,
-	.rename = NULL,
+	.rename = NULL, //Ignore
 	.utime = NULL
 };
 
@@ -59,6 +85,22 @@ int lfs_readdir( const char *path, void *buf, fuse_fill_dir_t filler, off_t offs
 	return 0;
 }
 
+int lfs_createfile(const char * path, mode_t mode, dev_t dev){
+	struct treeNode current = top;
+	char currentName[50];
+	int i=0;
+	for(char c = *path; c!=NULL; c++){
+		if(c == '/'){
+			//Find treeNode in current.dict where treeNode.name == currentName
+			currentName = char[50];
+		}else{
+			currentName[i] = c;
+			i++;
+		}
+	}
+
+}
+
 //Permission
 int lfs_open( const char *path, struct fuse_file_info *fi ) {
     printf("open: (path=%s)\n", path);
@@ -77,6 +119,20 @@ int lfs_release(const char *path, struct fuse_file_info *fi) {
 }
 
 int main( int argc, char *argv[] ) {
+	//Open filesystem file
+	if(!(fd = fopen("FileSystemFile","r+"))){
+		if(!(fd = fopen("FileSystemFile","w+"))){
+			return -1;
+		}
+		//Create "/" dicrectory
+		top->name = "/";
+		top->inode->size=0;
+		top->inode->st_atim = timespec_get();
+		top->inode->st_mtim = timespec_get();
+		top->inode->plist = NULL;
+		top->dict = NULL; //Linkedlist?
+	}
+
 	fuse_main( argc, argv, &lfs_oper );
 
 	return 0;
