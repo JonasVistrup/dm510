@@ -7,7 +7,7 @@ struct plist{
 	char* p[64]
 }
 
-
+//Arraylist
 
 struct Inode{
 	size_t size;
@@ -20,7 +20,7 @@ struct Inode{
 struct treeNode{
 	char* name;
 	struct Inode* inode;
-	struct treeNode** dict
+	struct treeNode** dict //Linkedlist?
 }
 
 
@@ -117,8 +117,7 @@ int lfs_release(const char *path, struct fuse_file_info *fi) {
 	printf("release: (path=%s)\n", path);
 	return 0;
 }
-
-int main( int argc, char *argv[] ) {
+int init(){
 	//Open filesystem file
 	if(!(fd = fopen("FileSystemFile","r+"))){
 		if(!(fd = fopen("FileSystemFile","w+"))){
@@ -132,7 +131,10 @@ int main( int argc, char *argv[] ) {
 		top->inode->plist = NULL;
 		top->dict = NULL; //Linkedlist?
 	}
+}
 
+
+int main( int argc, char *argv[] ) {
 	fuse_main( argc, argv, &lfs_oper );
 
 	return 0;
