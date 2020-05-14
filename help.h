@@ -95,20 +95,20 @@ int createNode(const char* path, int isFile){
 				current->dict[i] = newFile;
 				flag = 1;
 			}else{
-				struct treeNode* newFile = (struct treeNode*) malloc(sizeof(struct treeNode));
-        		        strcpy(newFile->name, token);
-        		        newFile->isFile = 1;
-                		newFile->inode.size = 0;
-               	         	newFile->inode.st_atim = time(NULL);
-                        	newFile->inode.st_mtim = time(NULL);
-                        	newFile->inode.plist = (struct plist*) calloc(128, sizeof(char*));
+				struct treeNode* newDir = (struct treeNode*) malloc(sizeof(struct treeNode));
+        		        strcpy(newDir->name, token);
+        		        newDir->isFile = 0;
+                		newDir->inode.size = 0;
+               	         	newDir->inode.st_atim = time(NULL);
+                        	newDir->inode.st_mtim = time(NULL);
+                        	newDir->inode.plist = NULL;
 
 	                        for(int i = 0; i < 100; i++){
-        	                        newFile->dict[i] = NULL;
+        	                        newDir->dict[i] = NULL;
                         	}
-                        	current->dict[i] = newFile;
-                        	flag = 1;
 
+                        	current->dict[i] = newDir;
+                        	flag = 1;
 			}
 		}
 		current = current->dict[i];
@@ -116,16 +116,16 @@ int createNode(const char* path, int isFile){
 	}
 
 	if(flag == 0){
-		//error lol, so reletable
+	//error lol, so reletable
 		return -1;
 	}
-	//Increase number of inodes!!!!!!!!!!!!!!!!!!!!!!!
-	return 0
-
-
+	numberOfNodes++;
+	return 0;
 }
 
+int removeNode(const char* path, int is(pedo)file){
 
+}
 
 // finds a block, reads it and saves it in local.
 void* seekNfind(int segment, int block){
@@ -196,6 +196,10 @@ int restoreStructure(){
 	//root = currentSeg * SEGMENT_SIZE * BLOCK_SIZE;
 	struct int_Node* node = (struct int_Node*) seekNfind(currentSeg, SEGMENT_SIZE-1); //check if written == 512
 
+	numberOfNodes = 1;
+
+	root = (struct treeNode*) malloc(sizeof(struct treeNode));
+
         strcpy(root->name, node->name);
 	root->isFile = node->isFile;
 	root->inode.size = node->inode.size;
@@ -224,13 +228,13 @@ int restoreStructure(){
 
 int init(){
 
-
 	//Open filesystem file
 	if(!(disk = fopen("FileSystemFile","r+"))){
 		if(!(disk = fopen("FileSystemFile","w+"))){
 			return -1;
 		}
 
+		numberOfNodes = 1;
 		root = (struct treeNode*) malloc(sizeof(struct treeNode));
 
 		//Create "/" dicrectory
