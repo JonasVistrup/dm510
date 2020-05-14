@@ -1,3 +1,4 @@
+#include <time.h>
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
@@ -7,7 +8,6 @@
 #define SEGMENT_SIZE 2048	//number of blocks in a segment
 #define TOTAL_SIZE 1000		//number of segments in storage
 
-
 struct plist{
 	char* p[128];
 };
@@ -15,13 +15,13 @@ struct plist{
 //Arraylist
 struct int_Inode{           //size = 48 bytes
          size_t size;
-         struct timespec st_atim;
-         struct timespec st_mtim;
+         time_t st_atim;
+         time_t st_mtim;
          int plist;
 };
 
 struct int_Node{
-//	int isFile;
+	int isFile;
         char name[60];
         struct int_Inode inode;
         int dict[100];
@@ -29,8 +29,8 @@ struct int_Node{
 
 struct Inode{		//size = 48 bytes
 	size_t size;
-	struct timespec st_atim;
-	struct timespec st_mtim;
+	time_t st_atim;
+	time_t st_mtim;
 	struct plist* plist;
 };
 
@@ -38,7 +38,7 @@ struct treeNode{	//MAX = 512 bytes, size?
 	int isFile;
 	char name[60];
 	struct Inode inode;
-	struct TreeNode* dict[100]; //Linkedlist? //Each treenode pointer is 4 bytes.
+	struct treeNode* dict[100]; //Linkedlist? //Each treenode pointer is 4 bytes.
 };
 
 static FILE* disk;
@@ -49,6 +49,7 @@ int currentSeg;
 int currentInode;
 
 struct treeNode* root;	//Always the first block
+
 
 
 // finds a block, reads it and saves it in local.
@@ -64,32 +65,36 @@ void* seekNfind(int segment, int block){
 
 void restoreFile(struct int_Node* node, struct treeNode* tNode){
 
-	tNode->name = node->name;
-        tNode->isFile = node->isFile;
+	//tNode->name = node->name;
+        strcpy(tNode->name, node->name);
+	tNode->isFile = node->isFile;
         tNode->inode.size = node->inode.size;
         tNode->inode.st_atim = node->inode.st_atim;
         tNode->inode.st_mtim = node->inode.st_mtim;
-	int[128] plist = *((int[]*) seekNfind(node->inode.plist / 65536, node->inode.plist % 65536));
+
+	int (*ptr)[128]	= ((int(*)[128]) seekNfind(node->inode.plist / 65536, node->inode.plist % 65536));
+
 	struct plist* pl = malloc(sizeof(struct plist));
 
 	for(int i = 0; i < 128; i++){
 
-		if(plist[i] == -1){
-			(*pl)[i] = -1;
-		}else{
+		if((*ptr)[i] == -1){
+			(pl->p)[i] = NULL;
 
-			(*pl)[i] = (char*) seekNfind(plist[i] / 65536, plist[i] % 65536);
+		}else{
+			(pl->p)[i] = (char*) seekNfind((*ptr)[i] / 65536, (*ptr)[i] % 65536);
 		}
 
 	}
-	tNode->Inode->plist = pl;
-	free(plist);
+
+	tNode->inode.plist = pl;
+	free(ptr);
 }
 
 
 void restoreDir(struct int_Node* node, struct treeNode* tNode){
 
-	tNode->name = node->name;
+        strcpy(tNode->name, node->name);
         tNode->isFile = node->isFile;
         tNode->inode.size = node->inode.size;
         tNode->inode.st_atim = node->inode.st_atim;
@@ -115,11 +120,12 @@ void restoreDir(struct int_Node* node, struct treeNode* tNode){
         free(node);
 }
 
+// to be deleted:
 int restoreStructure(){
 	//root = currentSeg * SEGMENT_SIZE * BLOCK_SIZE;
 	struct int_Node* node = (struct int_Node*) seekNfind(currentSeg, 0); //check if written == 512
 
-	root->name = node->name;
+        strcpy(root->name, node->name);
 	root->isFile = node->isFile;
 	root->inode.size = node->inode.size;
 	root->inode.st_atim = node->inode.st_atim;
@@ -136,14 +142,10 @@ int restoreStructure(){
 		//check if file or directory
 		if(intNode->isFile){
 			restoreFile(intNode, treeNode);
-
 		}else{
 			restoreDir(intNode, treeNode);
-
 		}
-
 		root->dict[i] = treeNode;
-
 		i++;
 	}
 	free(node);
@@ -151,18 +153,26 @@ int restoreStructure(){
 }
 
 int init(){
+
+
 	//Open filesystem file
 	if(!(disk = fopen("FileSystemFile","r+"))){
 		if(!(disk = fopen("FileSystemFile","w+"))){
 			return -1;
 		}
+
 		//Create "/" dicrectory
-		root->name = "/";
-		root->inode->size=0;
-		root->inode->st_atim = timespec_get();
-		root->inode->st_mtim = timespec_get();
-		root->inode->plist = NULL;
-		root->dict = NULL; //Linkedlist?
+	        strcpy(root->name, "/");
+		root->inode.size=0;
+		root->inode.st_atim = time(NULL);
+		root->inode.st_mtim = time(NULL);
+		root->inode.plist = NULL;
+
+		for(int i = 0; i < 100; i++){
+			root->dict[i] = NULL;
+		}
+
+		//root->dict = NULL; //Linkedlist?
 	}else{
 		//Read the file and setup system
 		restoreStructure();
@@ -175,8 +185,8 @@ int init(){
 		}
 		currentSeg = -1;
 		cleanerSeg = 0;
-
-		fwrite({currentSeg, cleanerSeg},sizeof(int),2,masterInfo);
+		int array[] = {currentSeg, cleanerSeg};
+		fwrite(array,sizeof(int),2,masterInfo);
 	}else{
 		int segInfo[2];
 		fread(segInfo, sizeof(int),2,masterInfo);
@@ -185,4 +195,3 @@ int init(){
 	}
 	return 0;
 }
-
