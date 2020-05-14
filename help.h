@@ -58,6 +58,75 @@ int numberOfNodes;
 
 struct treeNode* root;	//Always the first block
 
+//creates a file
+
+int createNode(const char* path, int isFile){
+
+	const char s[2] = "/";
+	char* path_copy = malloc(strlen(path));
+	strcpy(path_copy,path);
+	char* token = strtok(path_copy, s);
+
+	struct treeNode* current = root;
+
+	int flag = 0;
+
+	while(token != NULL && !flag){
+
+		int i = 0;
+		while(i < 100 && current->dict[i] != NULL &&strcmp(current->dict[i]->name, token)){
+			i++;
+		}
+		if(i == 100){
+			// file found.
+		}else if(current->dict[i] == NULL){
+			if(isFile){
+				struct treeNode* newFile = (struct treeNode*) malloc(sizeof(struct treeNode));
+				strcpy(newFile->name, token);
+				newFile->isFile = 1;
+				newFile->inode.size = 0;
+				newFile->inode.st_atim = time(NULL);
+				newFile->inode.st_mtim = time(NULL);
+				newFile->inode.plist = (struct plist*) calloc(128, sizeof(char*));
+
+				for(int i = 0; i < 100; i++){
+					newFile->dict[i] = NULL;
+				}
+				current->dict[i] = newFile;
+				flag = 1;
+			}else{
+				struct treeNode* newFile = (struct treeNode*) malloc(sizeof(struct treeNode));
+        		        strcpy(newFile->name, token);
+        		        newFile->isFile = 1;
+                		newFile->inode.size = 0;
+               	         	newFile->inode.st_atim = time(NULL);
+                        	newFile->inode.st_mtim = time(NULL);
+                        	newFile->inode.plist = (struct plist*) calloc(128, sizeof(char*));
+
+	                        for(int i = 0; i < 100; i++){
+        	                        newFile->dict[i] = NULL;
+                        	}
+                        	current->dict[i] = newFile;
+                        	flag = 1;
+
+			}
+		}
+		current = current->dict[i];
+		token = strtok(NULL,s);
+	}
+
+	if(flag == 0){
+		//error lol, so reletable
+		return -1;
+	}
+	//Increase number of inodes!!!!!!!!!!!!!!!!!!!!!!!
+	return 0
+
+
+}
+
+
+
 // finds a block, reads it and saves it in local.
 void* seekNfind(int segment, int block){
 
@@ -161,6 +230,8 @@ int init(){
 		if(!(disk = fopen("FileSystemFile","w+"))){
 			return -1;
 		}
+
+		root = (struct treeNode*) malloc(sizeof(struct treeNode));
 
 		//Create "/" dicrectory
 	        strcpy(root->name, "/");
