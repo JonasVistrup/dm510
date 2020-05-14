@@ -1,33 +1,9 @@
+#include "help.h"
 #include <fuse.h>
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-struct plist{
-	char* p[64]
-}
-
-//Arraylist
-
-struct Inode{
-	size_t size;
-	struct timespec st_atim;
-	struct timespec st_mtim;
-	struct plist* plist;
-}
-
-
-struct treeNode{
-	char* name;
-	struct Inode* inode;
-	struct treeNode** dict //Linkedlist?
-}
-
-
-FILE* fd;
-int systemSize = 1000*(1024*1024);
-
-struct treeNode* top;
 
 int lfs_getattr( const char *, struct stat * );
 int lfs_readdir( const char *, void *, fuse_fill_dir_t, off_t, struct fuse_file_info * );
@@ -85,20 +61,50 @@ int lfs_readdir( const char *path, void *buf, fuse_fill_dir_t filler, off_t offs
 	return 0;
 }
 
-int lfs_createfile(const char * path, mode_t mode, dev_t dev){
-	struct treeNode current = top;
-	char currentName[50];
-	int i=0;
-	for(char c = *path; c!=NULL; c++){
-		if(c == '/'){
-			//Find treeNode in current.dict where treeNode.name == currentName
-			currentName = char[50];
-		}else{
-			currentName[i] = c;
+int lfs_createfile(const char* path, mode_t mode, dev_t dev){
+	const char s[2] = "/";
+	char* path_copy = malloc(strlen(path));
+	strcpy(path_copy,path);
+	char* token = strtok(path_copy, s);
+
+	struct treeNode* current = root;
+
+	int flag = 0;
+
+	while(token != NULL && !flag){
+
+		int i = 0;
+		while(i < 100 && current->dict[i] != NULL &&strcmp(current->dict[i]->name, token)){
 			i++;
 		}
+		if(i == 100){
+			// file found.
+		}else if(current->dict[i] == NULL){
+
+			struct treeNode* newFile = malloc(sizeof(struct treeNode));
+			strcpy(newFile->name, token);
+			newFile->isFile = 1;
+			newFile->inode.size = 0;
+			newFile->inode.st_atim = time(NULL);
+			newFile->inode.st_mtim = time(NULL);
+			newFile->inode.plist = (struct plist*) calloc(128, sizeof(char*));
+
+			for(int i = 0; i < 100; i++){
+				newFile->dict[i] = NULL;
+			}
+			current->dict[i] = newFile;
+			flag = 1;
+		}
+		current = current->dict[i];
+		token = strtok(NULL,s);
 	}
 
+	if(flag == 0){
+		//error lol, so reletable
+		return -1;
+	}
+	//Increase number of inodes!!!!!!!!!!!!!!!!!!!!!!!
+	return 0;
 }
 
 //Permission
@@ -117,24 +123,12 @@ int lfs_release(const char *path, struct fuse_file_info *fi) {
 	printf("release: (path=%s)\n", path);
 	return 0;
 }
-int init(){
-	//Open filesystem file
-	if(!(fd = fopen("FileSystemFile","r+"))){
-		if(!(fd = fopen("FileSystemFile","w+"))){
-			return -1;
-		}
-		//Create "/" dicrectory
-		top->name = "/";
-		top->inode->size=0;
-		top->inode->st_atim = timespec_get();
-		top->inode->st_mtim = timespec_get();
-		top->inode->plist = NULL;
-		top->dict = NULL; //Linkedlist?
-	}
-}
+
 
 
 int main( int argc, char *argv[] ) {
+
+	init();
 	fuse_main( argc, argv, &lfs_oper );
 
 	return 0;

@@ -41,16 +41,22 @@ struct treeNode{	//MAX = 512 bytes, size?
 	struct treeNode* dict[100]; //Linkedlist? //Each treenode pointer is 4 bytes.
 };
 
+union block{
+	struct int_Node node;
+	int plist[128];
+	char data[BLOCK_SIZE];
+};
+
+union block segment[SEGMENT_SIZE];
+
 static FILE* disk;
 static FILE* masterInfo;
 
 int cleanerSeg;
 int currentSeg;
-int currentInode;
+int numberOfNodes;
 
 struct treeNode* root;	//Always the first block
-
-
 
 // finds a block, reads it and saves it in local.
 void* seekNfind(int segment, int block){
@@ -73,20 +79,17 @@ void restoreFile(struct int_Node* node, struct treeNode* tNode){
         tNode->inode.st_mtim = node->inode.st_mtim;
 
 	int (*ptr)[128]	= ((int(*)[128]) seekNfind(node->inode.plist / 65536, node->inode.plist % 65536));
-
 	struct plist* pl = malloc(sizeof(struct plist));
 
 	for(int i = 0; i < 128; i++){
 
 		if((*ptr)[i] == -1){
 			(pl->p)[i] = NULL;
-
 		}else{
 			(pl->p)[i] = (char*) seekNfind((*ptr)[i] / 65536, (*ptr)[i] % 65536);
 		}
 
 	}
-
 	tNode->inode.plist = pl;
 	free(ptr);
 }
@@ -105,7 +108,6 @@ void restoreDir(struct int_Node* node, struct treeNode* tNode){
         while(node->dict[i] == -1){
 
                 struct int_Node* intNode = (struct int_Node*) seekNfind( (node->dict[i] / 65536), (node->dict[i] % 65536));
-
                 struct treeNode* treeNode = (struct treeNode*) malloc(sizeof(struct treeNode));
 
                 //check if file or directory
@@ -123,7 +125,7 @@ void restoreDir(struct int_Node* node, struct treeNode* tNode){
 // to be deleted:
 int restoreStructure(){
 	//root = currentSeg * SEGMENT_SIZE * BLOCK_SIZE;
-	struct int_Node* node = (struct int_Node*) seekNfind(currentSeg, 0); //check if written == 512
+	struct int_Node* node = (struct int_Node*) seekNfind(currentSeg, SEGMENT_SIZE-1); //check if written == 512
 
         strcpy(root->name, node->name);
 	root->isFile = node->isFile;
@@ -136,7 +138,6 @@ int restoreStructure(){
 	while(node->dict[i] == -1){
 
 		struct int_Node* intNode = (struct int_Node*) seekNfind( (node->dict[i] / 65536), (node->dict[i] % 65536));
-
 		struct treeNode* treeNode = (struct treeNode*) malloc(sizeof(struct treeNode));
 
 		//check if file or directory
