@@ -136,19 +136,24 @@ int removeNode(const char* path, int isFile){
 	while(token != NULL && !flag){
 
 		int i = 0;
-		while(i < 100 && current->dict[i] != NULL &&strcmp(current->dict[i]->name, token)){
+		while(i < 100 && current->dict[i] != NULL && strcmp(current->dict[i]->name, token)){
 			i++;
 		}
+
 		if(i == 100){
 			return -1;
 		}
-		struct treeNode* node = malloc(sizeof(struct treeNode);
+
+		struct treeNode* node = malloc(sizeof(struct treeNode));
+
 		for(int j = 0; j < 128 ; j++){
 			free(node->inode.plist->p[j]);
 		}
+
 		free(node->inode.plist);
 		free(current->dict[i]);
 		current->dict = NULL;
+		token = strtok(NULL,s);
 	}
 
 	return 0;
