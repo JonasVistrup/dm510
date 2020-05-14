@@ -123,8 +123,35 @@ int createNode(const char* path, int isFile){
 	return 0;
 }
 
-int removeNode(const char* path, int is(pedo)file){
+int removeNode(const char* path, int isFile){
+	const char s[2] = "/";
+	char* path_copy = malloc(strlen(path));
+	strcpy(path_copy,path);
+	char* token = strtok(path_copy, s);
 
+	struct treeNode* current = root;
+
+	int flag = 0;
+
+	while(token != NULL && !flag){
+
+		int i = 0;
+		while(i < 100 && current->dict[i] != NULL &&strcmp(current->dict[i]->name, token)){
+			i++;
+		}
+		if(i == 100){
+			return -1;
+		}
+		struct treeNode* node = malloc(sizeof(struct treeNode);
+		for(int j = 0; j < 128 ; j++){
+			free(node->inode.plist->p[j]);
+		}
+		free(node->inode.plist);
+		free(current->dict[i]);
+		current->dict = NULL;
+	}
+
+	return 0;
 }
 
 // finds a block, reads it and saves it in local.
