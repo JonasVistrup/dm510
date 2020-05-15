@@ -74,7 +74,24 @@ int segmentCtrl(){
 }
 
 int reverseTree(struct treeNode* current){
-	
+
+	struct  int_Node* node;
+
+	for(int i = 0; i < 100; i++){
+		if(current->dict[i] == NULL){
+			return 0;
+		}else if(current->dict[i].inode.p == NULL){ // is diretory
+			reverseTree(current->dict[i]);
+
+		}else{	//is file
+			node.dict[i] = current->dict[i];
+		
+		}
+
+
+	}
+
+
 }
 
 int createNode(const char* path, int isFile){
