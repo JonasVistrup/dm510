@@ -64,8 +64,7 @@ struct treeNode* root;	//Always the first block
 
 int segmentCtrl(){
 	if((currentBlock + numberOfNodes) >= SEGMENT_SIZE){
-		reverseTree(
-		}
+		reverseTree(root);
 		//write out segment
 		fwrite(&segment, BLOCK_SIZE, SEGMENT_SIZE, disk);
 		currentSeg++;
@@ -77,22 +76,27 @@ int reverseTree(struct treeNode* current){
 
 	struct  int_Node node;
 
-	for(int i = 0; i < 100 && current->dict[i] != NULL; i++){
-		node.dict[i] = reverseTree(current->dict[i])
-	} 
-	
-	node.name = current->name
-		
-	node.inode.plist= current->inode.coordinate
-		
-	segment
-		
-		//insert parent as int_node into segment, as children have now been 
-		//inserted, so we can have pointer
+	for(int i = 0; i < 100; i++){
 
+		if(current->dict[i] == NULL){
+			node.dict[i] = -1;
+
+		}else{
+			node.dict[i] = reverseTree(current->dict[i]);
+
+		}
 	}
 
+	strcpy(node.name, current->name);
+	node.isFile = current->isFile;
+	node.inode.size = current->inode.size;
+	node.inode.st_atim = current->inode.st_atim;
+	node.inode.st_mtim = current->inode.st_mtim;
+	node.inode.plist= current->inode.coordinate;
 
+	segment[currentBlock] = node;
+	currentBlock++;
+	return currentSeg * 65536 + currentBlock -1;
 }
 
 int createNode(const char* path, int isFile){
