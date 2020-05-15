@@ -135,7 +135,7 @@ int removeNode(const char* path, int isFile){
         while(token != NULL && !flag){
 
                 int i = 0;                                                                             
-		while(i < 100 && current->dict[i] != NULL &&strcmp(current->dict[i]->n$                      
+		while(i < 100 && current->dict[i] != NULL &&strcmp(current->dict[i]->name, token)){                      
 			i++;
                 }
                 if(i == 100){
