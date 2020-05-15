@@ -31,6 +31,7 @@ struct Inode{		//size = 48 bytes
 	size_t size;
 	time_t st_atim;
 	time_t st_mtim;
+	int coordinate;
 	struct plist* plist;
 };
 
@@ -52,6 +53,7 @@ union block segment[SEGMENT_SIZE];
 static FILE* disk;
 static FILE* masterInfo;
 
+int currentBlock;
 int cleanerSeg;
 int currentSeg;
 int numberOfNodes;
@@ -59,6 +61,21 @@ int numberOfNodes;
 struct treeNode* root;	//Always the first block
 
 //creates a file
+
+int segmentCtrl(){
+	if((currentBlock + numberOfNodes) >= SEGMENT_SIZE){
+		reverseTree(
+		}
+		//write out segment
+		fwrite(&segment, BLOCK_SIZE, SEGMENT_SIZE, disk);
+		currentSeg++;
+	}
+	return 0;
+}
+
+int reverseTree(struct treeNode* current){
+	
+}
 
 int createNode(const char* path, int isFile){
 
@@ -88,6 +105,13 @@ int createNode(const char* path, int isFile){
 				newFile->inode.st_atim = time(NULL);
 				newFile->inode.st_mtim = time(NULL);
 				newFile->inode.plist = (struct plist*) calloc(128, sizeof(char*));
+				int oneArray[128];
+				for(i = 0; i<128; i++){
+					oneArray[i] = -1;
+				}
+				segment[currentBlock] = oneArray;
+				newFile->inode.coordinate = currentSeg * 65536 + currentBlock;
+				currentBlock++
 
 				for(int i = 0; i < 100; i++){
 					newFile->dict[i] = NULL;
@@ -329,5 +353,6 @@ int init(){
 		currentSeg = segInfo[0];
 		cleanerSeg = segInfo[1];
 	}
+	currentBlock = 0;
 	return 0;
 }
