@@ -123,15 +123,20 @@ int createNode(const char* path, int isFile){
 	return 0;
 }
 
-int removeNode(const char* path, int isFile){                                                  const char s[2] = "/";
+int removeNode(const char* path, int isFile){                                                  
+	const char s[2] = "/";
         char* path_copy = malloc(strlen(path));
-        strcpy(path_copy,path);                                                                char* token = strtok(path_copy, s);
+        strcpy(path_copy,path);                                                                
+	char* token = strtok(path_copy, s);
 
         struct treeNode* current = root;
-                                                                                               int flag = 0;                                                                  
+                                                                                               
+	int flag = 0;                                                                  
         while(token != NULL && !flag){
 
-                int i = 0;                                                                             while(i < 100 && current->dict[i] != NULL &&strcmp(current->dict[i]->n$                        i++;
+                int i = 0;                                                                             
+		while(i < 100 && current->dict[i] != NULL &&strcmp(current->dict[i]->n$                      
+			i++;
                 }
                 if(i == 100){
                         return -1;
@@ -140,8 +145,10 @@ int removeNode(const char* path, int isFile){                                   
                 if(token == NULL){
                         if(isFile){
                                 struct treeNode* node = current->dict[i];
-                                for(int j = 0; j < 128 ; j++){                                                                 if(node->inode.plist->p[j]!=NULL){
-                                                free(node->inode.plist->p[j]);                                                 }
+                                for(int j = 0; j < 128 ; j++){                                                                 
+					if(node->inode.plist->p[j]!=NULL){
+                                                free(node->inode.plist->p[j]);                                                 
+					}
                                 }
                                 free(node->inode.plist);
                                 free(current->dict[i]);
