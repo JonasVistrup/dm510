@@ -77,19 +77,16 @@ int reverseTree(struct treeNode* current){
 
 	struct  int_Node node;
 
-	for(int i = 0; i < 100; i++){
-		if(current->dict[i] == NULL){
-		}else{ 
-			reverseTree()
-			
-		if(current->dict[i].inode.p == NULL){ // is diretory
-			reverseTree(current->dict[i]);
-
-		}else{	//is file
-			//convert to int_node and
-			//insert child into segment
+	for(int i = 0; i < 100 && current->dict[i] != NULL; i++){
+		node.dict[i] = reverseTree(current->dict[i])
+	} 
+	
+	node.name = current->name
 		
-		}
+	node.inode.plist= current->inode.coordinate
+		
+	segment
+		
 		//insert parent as int_node into segment, as children have now been 
 		//inserted, so we can have pointer
 
