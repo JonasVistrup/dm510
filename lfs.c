@@ -36,34 +36,43 @@ int lfs_destoy(void* private_data){
 }
 
 int lfs_getattr( const char *path, struct stat *stbuf ) {
-	int res = 0;
-	printf("getattr: (path=%s)\n", path);
 
-	memset(stbuf, 0, sizeof(struct stat));
-	if( strcmp( path, "/" ) == 0 ) {
-		stbuf->st_mode = S_IFDIR | 0755;
-		stbuf->st_nlink = 2;
-	} else if( strcmp( path, "/hello" ) == 0 ) {
-		stbuf->st_mode = S_IFREG | 0777;
+	struct treeNode* node = getNode(path);
+
+	stbuf->st_size = (off_t) node->inode.size;
+	stbuf->st_atim = node->inode.st_atim;
+	stbuf->st_mtim = node->inode.st_mtim;
+
+	if(node->isFile){
 		stbuf->st_nlink = 1;
-		stbuf->st_size = 12;
-	} else
-		res = -ENOENT;
+		stbuf->st_mode = S_IFREG | 0777;
+	}else{
+		int i = 0;
 
-	return res;
+		while(note->dict[i] != NULL){
+			i++;
+		}
+		stbuf->st_nlink = i + 2;
+		stbuf->st_mode = S_IFDIR | 0755;
+	}
+
+	return 0;
 }
 
 int lfs_readdir( const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi ) {
-	(void) offset;
-	(void) fi;
+
 	printf("readdir: (path=%s)\n", path);
 
-	if(strcmp(path, "/") != 0)
-		return -ENOENT;
+	struct treeNode* node = getNode(path);
 
 	filler(buf, ".", NULL, 0);
 	filler(buf, "..", NULL, 0);
-	filler(buf, "hello", NULL, 0);
+
+	for(int i = 0; i<100 && node->dict[i] != NULL; i++){
+
+		filler(buf, node->dict[i]->name, NULL, 0);
+
+	}
 
 	return 0;
 }
@@ -91,7 +100,10 @@ int lfs_removedir(const char *path){
 //Permission
 int lfs_open( const char *path, struct fuse_file_info *fi ) {
 	printf("open: (path=%s)\n", path);
-	fi->fh = (uint64_t) getNode(path);
+
+	struct treeNode* node = getNode(path);
+
+	fi->fh = (uint64_t) node;
 	return 0;
 }
 
@@ -101,6 +113,7 @@ int lfs_read( const char *path, char *buf, size_t size, off_t offset, struct fus
 	return 6;
 }
 
+//Nothing to doe here
 int lfs_release(const char *path, struct fuse_file_info *fi) {
 	printf("release: (path=%s)\n", path);
 	return 0;
