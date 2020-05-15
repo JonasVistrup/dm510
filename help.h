@@ -232,13 +232,13 @@ struct treeNode* findNode(const char* path){
         char* path_copy = malloc(strlen(path));
         strcpy(path_copy,path);
 	char* token = strtok(path_copy, s);
-	printf("token = %s\n", token);
 
         struct treeNode* current = root;
 
         while(token != NULL){
+		printf("token12345 = %s\n", token);
                 int i = 0;
-		while(i < 100 && current->dict[i] != NULL &&strcmp(current->dict[i]->name, token)){
+		while(i < 100 && current->dict[i] != NULL && strcmp(current->dict[i]->name, token)){
 			i++;
                 }
 		if(current->dict[i] == NULL){
@@ -247,7 +247,6 @@ struct treeNode* findNode(const char* path){
 
 		token = strtok(NULL,s);
 		current = current->dict[i];
-		printf("token is now = %s\n", token);
 	}
 	return current;
 }
