@@ -62,22 +62,6 @@ struct treeNode* root;	//Always the first block
 
 //creates a file
 
-int segmentCtrl(){
-
-	if((currentBlock + numberOfNodes) >= SEGMENT_SIZE){
-		reverseTree(root);
-		//write out segment
-		fwrite(&segment, BLOCK_SIZE, SEGMENT_SIZE, disk);
-		currentSeg++;
-		currentBlock = 0;
-
-		int array[] = {currentSeg, cleanerSeg};
-		fseek(masterInfo, 0, SEEK_SET);
-		fwrite(array, sizeof(int), 2 , masterInfo);
-	}
-	return 0;
-}
-
 int reverseTree(struct treeNode* current){
 
 	struct  int_Node node;
@@ -100,9 +84,26 @@ int reverseTree(struct treeNode* current){
 	node.inode.st_mtim = current->inode.st_mtim;
 	node.inode.plist= current->inode.coordinate;
 
-	segment[currentBlock] = node;
+	segment[currentBlock].node = node;
 	currentBlock++;
 	return currentSeg * 65536 + currentBlock -1;
+}
+
+
+int segmentCtrl(){
+
+	if((currentBlock + numberOfNodes) >= SEGMENT_SIZE){
+		reverseTree(root);
+		//write out segment
+		fwrite(&segment, BLOCK_SIZE, SEGMENT_SIZE, disk);
+		currentSeg++;
+		currentBlock = 0;
+
+		int array[] = {currentSeg, cleanerSeg};
+		fseek(masterInfo, 0, SEEK_SET);
+		fwrite(array, sizeof(int), 2 , masterInfo);
+	}
+	return 0;
 }
 
 int createNode(const char* path, int isFile){
@@ -133,13 +134,11 @@ int createNode(const char* path, int isFile){
 				newFile->inode.st_atim = time(NULL);
 				newFile->inode.st_mtim = time(NULL);
 				newFile->inode.plist = (struct plist*) calloc(128, sizeof(char*));
-				int oneArray[128];
 				for(i = 0; i<128; i++){
-					oneArray[i] = -1;
+					segment[currentBlock].plist[i] = -1;
 				}
-				segment[currentBlock] = oneArray;
 				newFile->inode.coordinate = currentSeg * 65536 + currentBlock;
-				currentBlock++
+				currentBlock++;
 
 				for(int i = 0; i < 100; i++){
 					newFile->dict[i] = NULL;

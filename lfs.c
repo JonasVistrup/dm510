@@ -5,10 +5,12 @@
 #include <stdlib.h>
 #include "help.h"
 
+void lfs_destroy(void*);
 int lfs_getattr( const char *, struct stat * );
 int lfs_readdir( const char *, void *, fuse_fill_dir_t, off_t, struct fuse_file_info * );
 int lfs_createfile(const char *, mode_t, dev_t);
 int lfs_createdir(const char *, mode_t);
+int lfs_removefile(const char*);
 int lfs_removedir(const char *);
 int lfs_open( const char *, struct fuse_file_info * );
 int lfs_read( const char *, char *, size_t, off_t, struct fuse_file_info * );
@@ -31,8 +33,8 @@ static struct fuse_operations lfs_oper = {
 	.utime = NULL
 };
 
-int lfs_destoy(void* private_data){
-	return 0;
+void lfs_destroy(void* private_data){
+
 }
 
 int lfs_getattr( const char *path, struct stat *stbuf ) {
@@ -40,8 +42,18 @@ int lfs_getattr( const char *path, struct stat *stbuf ) {
 	struct treeNode* node = findNode(path);
 
 	stbuf->st_size = (off_t) node->inode.size;
-	stbuf->st_atim = node->inode.st_atim;
-	stbuf->st_mtim = node->inode.st_mtim;
+
+	struct timespec a;
+	struct timespec m;
+
+	a.tv_sec = node->inode.st_atim;
+	a.tv_nsec = 0;
+
+	m.tv_sec = node->inode.st_mtim;
+	m.tv_nsec = 0;
+
+	stbuf->st_atim = a;
+	stbuf->st_mtim = m;
 
 	if(node->isFile){
 		stbuf->st_nlink = 1;
@@ -49,7 +61,7 @@ int lfs_getattr( const char *path, struct stat *stbuf ) {
 	}else{
 		int i = 0;
 
-		while(note->dict[i] != NULL){
+		while(node->dict[i] != NULL){
 			i++;
 		}
 		stbuf->st_nlink = i + 2;
