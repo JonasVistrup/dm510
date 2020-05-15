@@ -15,11 +15,12 @@ int lfs_read( const char *, char *, size_t, off_t, struct fuse_file_info * );
 int lfs_release(const char *path, struct fuse_file_info *fi);
 
 static struct fuse_operations lfs_oper = {
+	.destroy	= lfs_destroy,
 	.getattr	= lfs_getattr,
 	.readdir	= lfs_readdir,
 	.mknod		= lfs_createfile,
 	.mkdir 		= lfs_createdir,
-	.unlink = NULL, //Ignore
+	.unlink 	= lfs_removefile,
 	.rmdir 		= lfs_removedir,
 	.truncate = NULL,
 	.open	= lfs_open,
@@ -29,6 +30,10 @@ static struct fuse_operations lfs_oper = {
 	.rename = NULL, //Ignore
 	.utime = NULL
 };
+
+int lfs_destoy(void* private_data){
+	return 0;
+}
 
 int lfs_getattr( const char *path, struct stat *stbuf ) {
 	int res = 0;
@@ -73,19 +78,25 @@ int lfs_createdir(const char *path, mode_t mode){
 	return 0;
 }
 
+int lfs_removefile(const char* path){
+	removeNode(path, 1);
+	return 0;
+}
+
 int lfs_removedir(const char *path){
-	createNode(path, 2);
+	createNode(path, 0);
 	return 0;
 }
 
 //Permission
 int lfs_open( const char *path, struct fuse_file_info *fi ) {
-    printf("open: (path=%s)\n", path);
+	printf("open: (path=%s)\n", path);
+	fi->fh = (uint64_t) getNode(path);
 	return 0;
 }
 
 int lfs_read( const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi ) {
-    printf("read: (path=%s)\n", path);
+    	printf("read: (path=%s)\n", path);
 	memcpy( buf, "Hello\n", 6 );
 	return 6;
 }

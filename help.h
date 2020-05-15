@@ -153,14 +153,38 @@ int removeNode(const char* path, int isFile){
                                 free(node->inode.plist);
                                 free(current->dict[i]);
                                 current->dict[i] = NULL;
-                        } else {
-				struct treeNode* node = current->dict[i];
 
+                        } else if(current->dict[0] != NULL){
+				//files or directories in dir you're trying to remove
+				return -1;
 
+			} else {
+				free(current->dict[i]);
+				current->dict[i] = NULL;
 			}
 		}
+		current = current->dict[i];
         }
 	return 0;
+}
+
+struct treeNode* findNode(const char* path){
+	const char s[2] = "/";
+        char* path_copy = malloc(strlen(path));
+        strcpy(path_copy,path);
+	char* token = strtok(path_copy, s);
+
+        struct treeNode* current = root;
+
+        while(token != NULL){
+                int i = 0;
+		while(i < 100 && current->dict[i] != NULL &&strcmp(current->dict[i]->name, token)){
+			i++;
+                }
+		token = strtok(NULL,s);
+		current = current->dict[i];
+	}
+	return current;
 }
 
 // finds a block, reads it and saves it in local.
