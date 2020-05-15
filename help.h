@@ -63,11 +63,17 @@ struct treeNode* root;	//Always the first block
 //creates a file
 
 int segmentCtrl(){
+
 	if((currentBlock + numberOfNodes) >= SEGMENT_SIZE){
 		reverseTree(root);
 		//write out segment
 		fwrite(&segment, BLOCK_SIZE, SEGMENT_SIZE, disk);
 		currentSeg++;
+		currentBlock = 0;
+
+		int array[] = {currentSeg, cleanerSeg};
+		fseek(masterInfo, 0, SEEK_SET);
+		fwrite(array, sizeof(int), 2 , masterInfo);
 	}
 	return 0;
 }
