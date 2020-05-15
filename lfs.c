@@ -37,7 +37,7 @@ int lfs_destoy(void* private_data){
 
 int lfs_getattr( const char *path, struct stat *stbuf ) {
 
-	struct treeNode* node = getNode(path);
+	struct treeNode* node = findNode(path);
 
 	stbuf->st_size = (off_t) node->inode.size;
 	stbuf->st_atim = node->inode.st_atim;
@@ -63,7 +63,7 @@ int lfs_readdir( const char *path, void *buf, fuse_fill_dir_t filler, off_t offs
 
 	printf("readdir: (path=%s)\n", path);
 
-	struct treeNode* node = getNode(path);
+	struct treeNode* node = findNode(path);
 
 	filler(buf, ".", NULL, 0);
 	filler(buf, "..", NULL, 0);
@@ -101,7 +101,7 @@ int lfs_removedir(const char *path){
 int lfs_open( const char *path, struct fuse_file_info *fi ) {
 	printf("open: (path=%s)\n", path);
 
-	struct treeNode* node = getNode(path);
+	struct treeNode* node = findNode(path);
 
 	fi->fh = (uint64_t) node;
 	return 0;
