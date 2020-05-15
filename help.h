@@ -75,11 +75,14 @@ int segmentCtrl(){
 
 int reverseTree(struct treeNode* current){
 
-	struct  int_Node* node;
+	struct  int_Node node;
 
 	for(int i = 0; i < 100; i++){
 		if(current->dict[i] == NULL){
-		}else if(current->dict[i].inode.p == NULL){ // is diretory
+		}else{ 
+			reverseTree()
+			
+		if(current->dict[i].inode.p == NULL){ // is diretory
 			reverseTree(current->dict[i]);
 
 		}else{	//is file
