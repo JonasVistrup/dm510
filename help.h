@@ -63,7 +63,7 @@ struct treeNode* root;	//Always the first block
 //creates a file
 
 int reverseTree(struct treeNode* current){
-
+	printf("Entering reverseTree\n");
 	struct  int_Node node;
 
 	for(int i = 0; i < 100; i++){
@@ -91,7 +91,7 @@ int reverseTree(struct treeNode* current){
 
 
 int segmentCtrl(){
-
+	printf("Entering segmentCTRL\n");
 	if((currentBlock + numberOfNodes) >= SEGMENT_SIZE){
 		reverseTree(root);
 		//write out segment
@@ -107,20 +107,23 @@ int segmentCtrl(){
 }
 
 int createNode(const char* path, int isFile){
+	printf("Entering createNode\n");
+	printf("%s\n",path);
 
 	const char s[2] = "/";
 	char* path_copy = malloc(strlen(path));
 	strcpy(path_copy,path);
 	char* token = strtok(path_copy, s);
-
+	printf("%s\n", token);
 	struct treeNode* current = root;
 
 	int flag = 0;
 
 	while(token != NULL && !flag){
 
+
 		int i = 0;
-		while(i < 100 && current->dict[i] != NULL &&strcmp(current->dict[i]->name, token)){
+		while(i < 100 && current->dict[i] != NULL && strcmp(current->dict[i]->name, token)){
 			i++;
 		}
 		if(i == 100){
@@ -164,6 +167,7 @@ int createNode(const char* path, int isFile){
 		}
 		current = current->dict[i];
 		token = strtok(NULL,s);
+		printf("%s\n",token);
 	}
 
 	if(flag == 0){
@@ -175,6 +179,7 @@ int createNode(const char* path, int isFile){
 }
 
 int removeNode(const char* path, int isFile){
+	printf("Entering removeNode \n");
 	const char s[2] = "/";
         char* path_copy = malloc(strlen(path));
         strcpy(path_copy,path);
@@ -220,10 +225,14 @@ int removeNode(const char* path, int isFile){
 }
 
 struct treeNode* findNode(const char* path){
+	printf("Entering findeNode\n");
+
+	printf("path = %s\n", path);
 	const char s[2] = "/";
         char* path_copy = malloc(strlen(path));
         strcpy(path_copy,path);
 	char* token = strtok(path_copy, s);
+	printf("token = %s\n", token);
 
         struct treeNode* current = root;
 
@@ -232,14 +241,20 @@ struct treeNode* findNode(const char* path){
 		while(i < 100 && current->dict[i] != NULL &&strcmp(current->dict[i]->name, token)){
 			i++;
                 }
+		if(current->dict[i] == NULL){
+			return NULL;
+		}
+
 		token = strtok(NULL,s);
 		current = current->dict[i];
+		printf("token is now = %s\n", token);
 	}
 	return current;
 }
 
 // finds a block, reads it and saves it in local.
 void* seekNfind(int segment, int block){
+	printf("Entering seekNfind\n");
 
 	void* local = malloc(sizeof(struct int_Node));
 	int offset = (segment * SEGMENT_SIZE * BLOCK_SIZE) + (block * BLOCK_SIZE);
@@ -250,6 +265,7 @@ void* seekNfind(int segment, int block){
 }
 
 void restoreFile(struct int_Node* node, struct treeNode* tNode){
+	printf("Entering restoreFile\n");
 
 	//tNode->name = node->name;
         strcpy(tNode->name, node->name);
@@ -276,6 +292,7 @@ void restoreFile(struct int_Node* node, struct treeNode* tNode){
 
 
 void restoreDir(struct int_Node* node, struct treeNode* tNode){
+	printf("Entering restoreDir\n");
 
         strcpy(tNode->name, node->name);
         tNode->isFile = node->isFile;
@@ -304,6 +321,8 @@ void restoreDir(struct int_Node* node, struct treeNode* tNode){
 
 // to be deleted:
 int restoreStructure(){
+	printf("Entering restoreStructure\n");
+
 	//root = currentSeg * SEGMENT_SIZE * BLOCK_SIZE;
 	struct int_Node* node = (struct int_Node*) seekNfind(currentSeg, SEGMENT_SIZE-1); //check if written == 512
 
@@ -338,6 +357,7 @@ int restoreStructure(){
 }
 
 int init(){
+	printf("Entering init\n");
 
 	//Open filesystem file
 	if(!(disk = fopen("FileSystemFile","r+"))){

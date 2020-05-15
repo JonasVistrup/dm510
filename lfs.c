@@ -34,17 +34,24 @@ static struct fuse_operations lfs_oper = {
 };
 
 void lfs_destroy(void* private_data){
-
+	printf("Entering destroy\n");
 }
 
 int lfs_getattr( const char *path, struct stat *stbuf ) {
+	printf("Entering lfs_getattr\n");
+
+	memset(stbuf, 0, sizeof(struct stat));
 
 	struct treeNode* node = findNode(path);
 
-	stbuf->st_size = (off_t) node->inode.size;
-
 	struct timespec a;
-	struct timespec m;
+        struct timespec m;
+
+	if(node == NULL){
+		return 0;
+	}
+
+	stbuf->st_size = (off_t) node->inode.size;
 
 	a.tv_sec = node->inode.st_atim;
 	a.tv_nsec = 0;
@@ -72,6 +79,7 @@ int lfs_getattr( const char *path, struct stat *stbuf ) {
 }
 
 int lfs_readdir( const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi ) {
+	printf("Entering lfs_readdir\n");
 
 	printf("readdir: (path=%s)\n", path);
 
@@ -90,27 +98,32 @@ int lfs_readdir( const char *path, void *buf, fuse_fill_dir_t filler, off_t offs
 }
 
 int lfs_createfile(const char* path, mode_t mode, dev_t dev){
+	printf("Entering lfs_createfile\n");
 	createNode(path, 1);
 	return 0;
 }
 
 int lfs_createdir(const char *path, mode_t mode){
+	printf("Entering lfs_createdir\n");
 	createNode(path, 0);
 	return 0;
 }
 
 int lfs_removefile(const char* path){
+	printf("Entering lfs_removefile\n");
 	removeNode(path, 1);
 	return 0;
 }
 
 int lfs_removedir(const char *path){
+	printf("Entering lfs_removedir\n");
 	createNode(path, 0);
 	return 0;
 }
 
 //Permission
 int lfs_open( const char *path, struct fuse_file_info *fi ) {
+	printf("Entering lfs_open\n");
 	printf("open: (path=%s)\n", path);
 
 	struct treeNode* node = findNode(path);
@@ -120,13 +133,16 @@ int lfs_open( const char *path, struct fuse_file_info *fi ) {
 }
 
 int lfs_read( const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi ) {
-    	printf("read: (path=%s)\n", path);
+   	printf("Entering lfs_read\n");
+
+	printf("read: (path=%s)\n", path);
 	memcpy( buf, "Hello\n", 6 );
 	return 6;
 }
 
 //Nothing to doe here
 int lfs_release(const char *path, struct fuse_file_info *fi) {
+	printf("Entering lfs_release\n");
 	printf("release: (path=%s)\n", path);
 	return 0;
 }
@@ -134,7 +150,7 @@ int lfs_release(const char *path, struct fuse_file_info *fi) {
 
 
 int main( int argc, char *argv[] ) {
-
+	printf("Entering main\n");
 	init();
 	fuse_main( argc, argv, &lfs_oper );
 
