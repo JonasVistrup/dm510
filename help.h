@@ -62,6 +62,14 @@ struct treeNode* root;	//Always the first block
 
 char** pathSplit(const char* path){
 
+	printf("Entering pathsplit\n");
+
+	if(!strcmp(path, "/")){
+	//	char* dum[0];
+		return NULL;
+	}
+
+
 	const char* pathcopy = path;
 
 	int i = 0;
@@ -108,6 +116,8 @@ char** pathSplit(const char* path){
 
 
 	}
+
+	printf("Exting pathSpilt\n");
 
 	return *split;
 }
@@ -281,30 +291,40 @@ int removeNode(const char* path, int isFile){
 }
 
 struct treeNode* findNode(const char* path){
-	printf("Entering findeNode\n");
+
+	printf("Entering findNode\n");
 
 	printf("path = %s\n", path);
-	const char s[2] = "/";
-        char* path_copy = malloc(strlen(path));
-        strcpy(path_copy,path);
-	char* token = strtok(path_copy, s);
+	char** split;
 
-        struct treeNode* current = root;
+	split = pathSplit(path);
 
-        while(token != NULL){
-		printf("token12345 = %s\n", token);
-                int i = 0;
-		while(i < 100 && current->dict[i] != NULL && strcmp(current->dict[i]->name, token)){
-			i++;
-                }
-		if(current->dict[i] == NULL){
+	if(split == NULL){
+
+		printf("split = NULL \n");
+
+		return root;
+	}
+
+	printf("after pathsplit\n");
+
+	struct treeNode* node = root;
+
+	int j;
+
+	for(int i = 0; i < sizeof(split) / sizeof(split[0]); i++){
+
+		for(j = 0; j < 100 && node->dict[j] != NULL && strcmp(node->dict[j]->name, split[i]); j++){}
+
+		if(j == 100 || node->dict[j] == NULL){
+
 			return NULL;
 		}
 
-		token = strtok(NULL,s);
-		current = current->dict[i];
+		node = node->dict[j];
 	}
-	return current;
+
+	return node;
 }
 
 // finds a block, reads it and saves it in local.
@@ -428,6 +448,7 @@ int init(){
 		root->inode.size=0;
 		root->inode.st_atim = time(NULL);
 		root->inode.st_mtim = time(NULL);
+		root->inode.coordinate = -1;
 		root->inode.plist = NULL;
 
 		for(int i = 0; i < 100; i++){

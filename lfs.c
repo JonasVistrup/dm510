@@ -44,6 +44,8 @@ int lfs_getattr( const char *path, struct stat *stbuf ) {
 
 	struct treeNode* node = findNode(path);
 
+	printf("Exiting findNode\n");
+
 	struct timespec a;
         struct timespec m;
 
