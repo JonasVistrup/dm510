@@ -193,9 +193,11 @@ int createNode(const char* path, int isFile){
 	struct treeNode* node = root;
 	int j;
 
-	for(int i = 0; i < (sizeof(split) / sizeof(split[0]))-1; i++){
+	int k;
 
-		for(j = 0; j < 100 && node->dict[j] != NULL && strcmp(node->dict[j]->name, split[i]); j++){}
+	for(k = 0; k < (sizeof(split) / sizeof(split[0]))-1; k++){
+
+		for(j = 0; j < 100 && node->dict[j] != NULL && strcmp(node->dict[j]->name, split[k]); j++){}
 
 		if(j == 100 || node->dict[j] == NULL){
 			printf("Exiting createNode j== 100 or node->dict[j] == NULL\n");
@@ -233,18 +235,25 @@ int createNode(const char* path, int isFile){
 		}
 		node->dict[j] = newFile;
 	}else{
+		printf("is dir - createNode\n");
 		struct treeNode* newDir = (struct treeNode*) malloc(sizeof(struct treeNode));
-                strcpy(newDir->name, split[sizeof(split) / sizeof(split[0])-1]);
+		printf("Before string cp\n");
+                strcpy(newDir->name, split[k]);
+		printf("After string cp\n");
                 newDir->isFile = 0;
                	newDir->inode.size = 0;
            	newDir->inode.st_atim = time(NULL);
                 newDir->inode.st_mtim = time(NULL);
+		newDir->inode.coordinate = -1;
                 newDir->inode.plist = NULL;
+
+		printf("Before for - createNode\n");
 
 	        for(int i = 0; i < 100; i++){
 	 		newDir->dict[i] = NULL;
 		}
 		node->dict[j] = newDir;
+		printf("Exiting is dir - createNode\n");
 	}
 	printf("Exiting createNode\n");
 
@@ -469,6 +478,7 @@ int init(){
 
 		//Create "/" dicrectory
 	        strcpy(root->name, "/");
+		root->isFile = 0;
 		root->inode.size=0;
 		root->inode.st_atim = time(NULL);
 		root->inode.st_mtim = time(NULL);
