@@ -67,7 +67,7 @@ char** pathSplit(const char* path){
 	if(!strcmp(path, "/")){
 	//	char* dum[0];
 
-	printf("Exiting pathsplit: path != "/"\n");
+	printf("Exiting pathsplit: path != \"/\"\n");
 		return NULL;
 	}
 
@@ -182,73 +182,70 @@ int createNode(const char* path, int isFile){
 	printf("Entering createNode\n");
 	printf("%s\n",path);
 
-	const char s[2] = "/";
-	char* path_copy = malloc(strlen(path));
-	strcpy(path_copy,path);
-	char* token = strtok(path_copy, s);
-	printf("%s\n", token);
-	struct treeNode* current = root;
+	char** split = pathSplit(path);
 
-	int flag = 0;
-
-	while(token != NULL && !flag){
-
-
-		int i = 0;
-		while(i < 100 && current->dict[i] != NULL && strcmp(current->dict[i]->name, token)){
-			i++;
-		}
-		if(i == 100){
-			// file found.
-		}else if(current->dict[i] == NULL){
-			if(isFile){
-				struct treeNode* newFile = (struct treeNode*) malloc(sizeof(struct treeNode));
-				strcpy(newFile->name, token);
-				newFile->isFile = 1;
-				newFile->inode.size = 0;
-				newFile->inode.st_atim = time(NULL);
-				newFile->inode.st_mtim = time(NULL);
-				newFile->inode.plist = (struct plist*) calloc(128, sizeof(char*));
-				for(i = 0; i<128; i++){
-					segment[currentBlock].plist[i] = -1;
-				}
-				newFile->inode.coordinate = currentSeg * 65536 + currentBlock;
-				currentBlock++;
-
-				for(int i = 0; i < 100; i++){
-					newFile->dict[i] = NULL;
-				}
-				current->dict[i] = newFile;
-				flag = 1;
-			}else{
-				struct treeNode* newDir = (struct treeNode*) malloc(sizeof(struct treeNode));
-        		        strcpy(newDir->name, token);
-        		        newDir->isFile = 0;
-                		newDir->inode.size = 0;
-               	         	newDir->inode.st_atim = time(NULL);
-                        	newDir->inode.st_mtim = time(NULL);
-                        	newDir->inode.plist = NULL;
-
-	                        for(int i = 0; i < 100; i++){
-        	                        newDir->dict[i] = NULL;
-                        	}
-
-                        	current->dict[i] = newDir;
-                        	flag = 1;
-			}
-		}
-		current = current->dict[i];
-		token = strtok(NULL,s);
-		printf("%s\n",token);
-	}
-
-	if(flag == 0){
-	//error lol, so reletable
-	printf("Exiting createNode\n");
+	if(split == NULL){
+		printf("Exiting createNode split == NULL\n");
 
 		return -1;
 	}
-	numberOfNodes++;
+
+	struct treeNode* node = root;
+	int j;
+
+	for(int i = 0; i < (sizeof(split) / sizeof(split[0]))-1; i++){
+
+		for(j = 0; j < 100 && node->dict[j] != NULL && strcmp(node->dict[j]->name, split[i]); j++){}
+
+		if(j == 100 || node->dict[j] == NULL){
+			printf("Exiting createNode j== 100 or node->dict[j] == NULL\n");
+
+			return -ENOENT;
+		}
+
+		node = node->dict[j];
+	}
+
+	for(j = 0; j < 100 && node->dict[j] !=NULL; j++){}
+
+	if(j == 100){
+		printf("No space in dict\n");
+		return -ENOMEM;
+	}
+
+	if(isFile){
+		struct treeNode* newFile = (struct treeNode*) malloc(sizeof(struct treeNode));
+		strcpy(newFile->name, split[sizeof(split) / sizeof(split[0])-1]);
+		newFile->isFile = 1;
+		newFile->inode.size = 0;
+		newFile->inode.st_atim = time(NULL);
+		newFile->inode.st_mtim = time(NULL);
+		newFile->inode.plist = (struct plist*) calloc(128, sizeof(char*));
+
+		for(int i = 0; i<128; i++){
+			segment[currentBlock].plist[i] = -1;
+		}
+		newFile->inode.coordinate = currentSeg * 65536 + currentBlock;
+		currentBlock++;
+
+		for(int i = 0; i < 100; i++){
+			newFile->dict[i] = NULL;
+		}
+		node->dict[j] = newFile;
+	}else{
+		struct treeNode* newDir = (struct treeNode*) malloc(sizeof(struct treeNode));
+                strcpy(newDir->name, split[sizeof(split) / sizeof(split[0])-1]);
+                newDir->isFile = 0;
+               	newDir->inode.size = 0;
+           	newDir->inode.st_atim = time(NULL);
+                newDir->inode.st_mtim = time(NULL);
+                newDir->inode.plist = NULL;
+
+	        for(int i = 0; i < 100; i++){
+	 		newDir->dict[i] = NULL;
+		}
+		node->dict[j] = newDir;
+	}
 	printf("Exiting createNode\n");
 
 	return 0;
