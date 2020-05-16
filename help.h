@@ -66,6 +66,8 @@ char** pathSplit(const char* path){
 
 	if(!strcmp(path, "/")){
 	//	char* dum[0];
+
+	printf("Exiting pathsplit: path != "/"\n");
 		return NULL;
 	}
 
@@ -152,6 +154,8 @@ int reverseTree(struct treeNode* current){
 
 	segment[currentBlock].node = node;
 	currentBlock++;
+	printf("Exiting reverseTree\n");
+
 	return currentSeg * 65536 + currentBlock -1;
 }
 
@@ -169,6 +173,8 @@ int segmentCtrl(){
 		fseek(masterInfo, 0, SEEK_SET);
 		fwrite(array, sizeof(int), 2 , masterInfo);
 	}
+	printf("Exiting segmentCtrl\n");
+
 	return 0;
 }
 
@@ -238,9 +244,13 @@ int createNode(const char* path, int isFile){
 
 	if(flag == 0){
 	//error lol, so reletable
+	printf("Exiting createNode\n");
+
 		return -1;
 	}
 	numberOfNodes++;
+	printf("Exiting createNode\n");
+
 	return 0;
 }
 
@@ -261,6 +271,8 @@ int removeNode(const char* path, int isFile){
 			i++;
                 }
                 if(i == 100){
+			printf("Exiting removeNode: i == 100\n");
+
                         return -1;
                 }
                 token = strtok(NULL,s);
@@ -278,6 +290,8 @@ int removeNode(const char* path, int isFile){
 
                         } else if(current->dict[0] != NULL){
 				//files or directories in dir you're trying to remove
+				printf("Exiting removeNode: current->dict[0] != NULL\n");
+
 				return -1;
 
 			} else {
@@ -287,6 +301,8 @@ int removeNode(const char* path, int isFile){
 		}
 		current = current->dict[i];
         }
+	printf("Exiting removeNode\n");
+
 	return 0;
 }
 
@@ -301,7 +317,7 @@ struct treeNode* findNode(const char* path){
 
 	if(split == NULL){
 
-		printf("split = NULL \n");
+		printf("Exiting findNode split == NULL\n");
 
 		return root;
 	}
@@ -317,12 +333,14 @@ struct treeNode* findNode(const char* path){
 		for(j = 0; j < 100 && node->dict[j] != NULL && strcmp(node->dict[j]->name, split[i]); j++){}
 
 		if(j == 100 || node->dict[j] == NULL){
+			printf("Exiting findNode j== 100 or node->dict[j] == NULL\n");
 
 			return NULL;
 		}
 
 		node = node->dict[j];
 	}
+	printf("Exiting findNode\n");
 
 	return node;
 }
@@ -335,6 +353,7 @@ void* seekNfind(int segment, int block){
 	int offset = (segment * SEGMENT_SIZE * BLOCK_SIZE) + (block * BLOCK_SIZE);
 	fseek(disk, offset, SEEK_SET);
 	int written = fread(local, BLOCK_SIZE, 1, disk);//check if written is 512 bytes
+	printf("Exiting seekNfind\n");
 
 	return local;
 }
@@ -363,6 +382,8 @@ void restoreFile(struct int_Node* node, struct treeNode* tNode){
 	}
 	tNode->inode.plist = pl;
 	free(ptr);
+	printf("Exiting restoreFile\n");
+
 }
 
 
@@ -392,6 +413,8 @@ void restoreDir(struct int_Node* node, struct treeNode* tNode){
                 i++;
         }
         free(node);
+	printf("Exiting restoreDir\n");
+
 }
 
 // to be deleted:
@@ -428,6 +451,8 @@ int restoreStructure(){
 		i++;
 	}
 	free(node);
+	printf("Exiting restoreStructure\n");
+
 	return 0;
 }
 
@@ -437,6 +462,8 @@ int init(){
 	//Open filesystem file
 	if(!(disk = fopen("FileSystemFile","r+"))){
 		if(!(disk = fopen("FileSystemFile","w+"))){
+			printf("Exiting init: disk = fopen returns error\n");
+
 			return -1;
 		}
 
@@ -464,6 +491,8 @@ int init(){
 	//Open MasterInfo file
 	if(!(masterInfo = fopen("MasterInfo","r+"))){
 		if(!(masterInfo = fopen("MasterInfo","w+"))){
+			printf("Exiting init: master = fopen returns error\n");
+
 			return -1;
 		}
 		currentSeg = -1;
@@ -477,5 +506,7 @@ int init(){
 		cleanerSeg = segInfo[1];
 	}
 	currentBlock = 0;
+	printf("Exiting init\n");
+
 	return 0;
 }
