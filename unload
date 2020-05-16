@@ -1,0 +1,3 @@
+fusermount -u /tmp/Tw
+rm MasterInfo FileSystemFile
+make clean

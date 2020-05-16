@@ -1,0 +1,5 @@
+make
+
+./lfs -f /tmp/Tw
+
+
