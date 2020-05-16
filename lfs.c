@@ -52,7 +52,7 @@ int lfs_getattr( const char *path, struct stat *stbuf ) {
 
 	if(node == NULL){
 	printf("Exiting lfs_getattr: node == NULL\n");
-		return ENOENT;
+		return -ENOENT;
 	}
 
 	stbuf->st_size = (off_t) node->inode.size;
