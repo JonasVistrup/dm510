@@ -61,7 +61,6 @@ int numberOfNodes;
 struct treeNode* root;	//Always the first block
 
 char** pathSplit(const char* path){
-
 	printf("Entering pathsplit\n");
 
 	if(!strcmp(path, "/")){
@@ -71,9 +70,7 @@ char** pathSplit(const char* path){
 		return NULL;
 	}
 
-
 	const char* pathcopy = path;
-
 	int i = 0;
 
 	for(char c = *pathcopy; c != '\0'; pathcopy ++){
@@ -81,29 +78,23 @@ char** pathSplit(const char* path){
 		c = *pathcopy;
 
 		if(c == '/'){
-
 			i++;
 		}
+
 	}
 
 	pathcopy = path + 1;
-
 	char* (*split)[i];
-
 	split = malloc(sizeof(split));
 
 	i = 0;
-
 	char current[60];
-
 	memset(current, 0, sizeof(current));
-
 	int j = 0;
 
 	for(char c = *pathcopy; c != '\0'; pathcopy ++){
 
 		c = *pathcopy;
-
 		if(c == '/'){
 
 			(*split)[i] = current;
@@ -111,20 +102,18 @@ char** pathSplit(const char* path){
 			j = 0;
 			i++;
 		}else{
-
 			current[j] = c;
 			j++;
 		}
-
-
+		printf("%c\n",c);
 	}
 
-	printf("Exting pathSpilt\n");
+	(*split)[i] = current;
+	printf("%s\n", *split[0]);
 
+	printf("Exting pathSpilt\n");
 	return *split;
 }
-
-
 
 
 
