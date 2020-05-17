@@ -48,6 +48,7 @@ union block{
 	char data[BLOCK_SIZE];
 };
 
+
 union block segment[SEGMENT_SIZE];
 
 static FILE* disk;
@@ -59,6 +60,7 @@ int currentSeg;
 int numberOfNodes;
 
 struct treeNode* root;	//Always the first block
+
 
 char** pathSplit(const char* path){
 	printf("Entering pathsplit\n");
@@ -91,12 +93,10 @@ char** pathSplit(const char* path){
 	char current[60];
 	memset(current, 0, sizeof(current));
 	int j = 0;
-
 	for(char c = *pathcopy; c != '\0'; pathcopy ++){
 
 		c = *pathcopy;
 		if(c == '/'){
-
 			(*split)[i] = current;
 			memset(current, 0, sizeof(current));
 			j = 0;
@@ -105,11 +105,14 @@ char** pathSplit(const char* path){
 			current[j] = c;
 			j++;
 		}
-		printf("%c\n",c);
-	}
 
-	(*split)[i] = current;
-	printf("%s\n", *split[0]);
+		printf("%c\n",c);
+
+	}
+	(*split)[i] = current; //works for now
+	printf("dir name = %s\n", *split[0]);
+
+	printf("printing i:  %d\n", i);
 
 	printf("Exting pathSpilt\n");
 	return *split;
@@ -206,7 +209,8 @@ int createNode(const char* path, int isFile){
 
 	if(isFile){
 		struct treeNode* newFile = (struct treeNode*) malloc(sizeof(struct treeNode));
-		strcpy(newFile->name, split[sizeof(split) / sizeof(split[0])-1]);
+                strcpy(newFile->name, &(*pathSplit(path)[k])); //split[k]
+		//strcpy(newFile->name, split[sizeof(split) / sizeof(split[0])-1]);
 		newFile->isFile = 1;
 		newFile->inode.size = 0;
 		newFile->inode.st_atim = time(NULL);
@@ -225,9 +229,12 @@ int createNode(const char* path, int isFile){
 		node->dict[j] = newFile;
 	}else{
 		printf("is dir - createNode\n");
+
 		struct treeNode* newDir = (struct treeNode*) malloc(sizeof(struct treeNode));
+		//the splitted path disappears when we malloc memory for a treeNode
+
 		printf("Before string cp\n");
-                strcpy(newDir->name, split[k]);
+                strcpy(newDir->name, &(*pathSplit(path)[k])); //split[k]
 		printf("After string cp\n");
                 newDir->isFile = 0;
                	newDir->inode.size = 0;
@@ -251,51 +258,67 @@ int createNode(const char* path, int isFile){
 
 int removeNode(const char* path, int isFile){
 	printf("Entering removeNode \n");
-	const char s[2] = "/";
-        char* path_copy = malloc(strlen(path));
-        strcpy(path_copy,path);
-	char* token = strtok(path_copy, s);
+	printf("%s\n",path);
 
-        struct treeNode* current = root;
+	struct treeNode* current = root;
 
-	int flag = 0;
-        while(token != NULL && !flag){
+	char** split = pathSplit(path);
 
-                int i = 0;
-		while(i < 100 && current->dict[i] != NULL &&strcmp(current->dict[i]->name, token)){
-			i++;
-                }
-                if(i == 100){
-			printf("Exiting removeNode: i == 100\n");
+	if(split == NULL){
+		printf("Exiting removeNode split == NULL\n");
+		return -1;
+	}
 
-                        return -1;
-                }
-                token = strtok(NULL,s);
-                if(token == NULL){
-                        if(isFile){
-                                struct treeNode* node = current->dict[i];
-                                for(int j = 0; j < 128 ; j++){
-					if(node->inode.plist->p[j]!=NULL){
-                                                free(node->inode.plist->p[j]);
-					}
-                                }
-                                free(node->inode.plist);
-                                free(current->dict[i]);
-                                current->dict[i] = NULL;
+	int k;
+	int j = 0;
 
-                        } else if(current->dict[0] != NULL){
-				//files or directories in dir you're trying to remove
-				printf("Exiting removeNode: current->dict[0] != NULL\n");
+	for(k = 0; k < (sizeof(split) / sizeof(split[0]))-1; k++){
+		printf("printing split[0] in for-loop:  %s\n", split[k]);
 
-				return -1;
+		for(j = 0; j < 100 && current->dict[j] != NULL && strcmp(current->dict[j]->name, split[k]); j++){}
 
-			} else {
-				free(current->dict[i]);
-				current->dict[i] = NULL;
+		if(j == 100 || current->dict[j] == NULL){
+			printf("Exiting removeNode j== 100 or node->dict[j] == NULL\n");
+			return -ENOENT;
+		}
+		printf("HEEEELLLOOOOOOO\n");
+		current = current->dict[j];
+	}
+
+	int i = 0;
+	while(i < 100 && current->dict[i] != NULL &&strcmp(current->dict[i]->name, split[k])){
+		i++;
+	}
+	if(i == 100){
+		printf("Exiting removeNode: i == 100\n");
+		return -1;
+	}
+
+	if(isFile){
+		struct treeNode* node = current->dict[i];
+		for(int j = 0; j < 128 ; j++){
+			if(node->inode.plist->p[j]!=NULL){
+                        	free(node->inode.plist->p[j]);
 			}
 		}
-		current = current->dict[i];
-        }
+		free(node->inode.plist);
+		free(current->dict[i]);
+		current->dict[i] = NULL;
+
+        }else if(current->dict[0]->dict[0] != NULL){
+		printf("printing current->name:   %s\n", current->name);
+		printf("printing node->name:  %s\n", current->dict[0]->name);
+		//files or directories in dir you're trying to remove
+		printf("Exiting removeNode: current->dict[0] != NULL\n");
+
+		return -1;
+
+	} else {
+		free(current->dict[0]); //changed i to 0
+		current->dict[i] = NULL;
+	}
+
+	current = current->dict[i];
 	printf("Exiting removeNode\n");
 
 	return 0;

@@ -127,7 +127,7 @@ int lfs_removefile(const char* path){
 
 int lfs_removedir(const char *path){
 	printf("Entering lfs_removedir\n");
-	createNode(path, 0);
+	removeNode(path, 0);
 	printf("Exiting lfs_removedir\n");
 
 	return 0;
