@@ -25,9 +25,9 @@ static struct fuse_operations lfs_oper = {
 	.unlink 	= lfs_removefile,
 	.rmdir 		= lfs_removedir,
 	.truncate = NULL,
-	.open	= lfs_open,
-	.read	= lfs_read,
-	.release = lfs_release,
+	.open		= lfs_open,
+	.read		= lfs_read,
+	.release 	= lfs_release,
 	.write = NULL,
 	.rename = NULL, //Ignore
 	.utime = NULL
@@ -35,8 +35,28 @@ static struct fuse_operations lfs_oper = {
 
 void lfs_destroy(void* private_data){
 	printf("Entering destroy\n");
+	//1 gem segment i filesystemfile
+	currentBlock = SEGMENT_SIZE-numberOfNodes;
+	segmentCtrl();
 
 
+
+
+
+	//2 free memory
+
+
+
+
+
+
+
+
+
+
+
+	fclose(masterInfo);
+	fclose(disk);
 	printf("Exiting lfs_destroy\n");
 }
 

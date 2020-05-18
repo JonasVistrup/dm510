@@ -14,10 +14,11 @@ struct plist{
 
 //Arraylist
 struct int_Inode{           //size = 48 bytes
-         size_t size;
-         time_t st_atim;
-         time_t st_mtim;
-         int plist;
+        size_t size;
+        time_t st_atim;
+        time_t st_mtim;
+	int dummythicc[4];
+        int plist;
 };
 
 struct int_Node{
@@ -49,7 +50,7 @@ union block{
 };
 
 
-union block segment[SEGMENT_SIZE];
+union block (*segment)[SEGMENT_SIZE];
 
 static FILE* disk;
 static FILE* masterInfo;
@@ -80,41 +81,41 @@ stringArray pathSplit(string path){
 		stringArray retVal = {.ss = NULL, .length = 0};
 		return retVal;
 	}
-	printf("after root check\n");
+
 	int counter = 0;
 	for(int i = 0; i < path.length; i++){
 		if(path.s[i] == '/'){
 			counter++;
 		}
 	}
-	printf("After Counter\n");
 	stringArray retVal;
 	retVal.ss = malloc(sizeof(string)*counter);
 	retVal.length = counter;
-	printf("Counter = %d\n", counter);
+
 	string* next = malloc(sizeof(string));
 	next->s = malloc(sizeof(char)*60);
 	int nextPos = 0;
 	int ncounter = 0;
-	printf("right before for-loop\n");
+
 	for(int i = 1; i<path.length; i++){
 		if(path.s[i] == '/'){
-			printf("In if /\n");
+			//printf("In if /\n");
 			next->length = nextPos;
 			retVal.ss[ncounter] = *next;
 			ncounter++;
 			nextPos=0;
 			next = malloc(sizeof(string));
 			next->s = malloc(sizeof(char)*60);
-			printf("out of if /\n");
+			//printf("out of if /\n");
 		}else{
-			printf("in else\n");
+			//printf("in else\n");
 			next->s[nextPos] = path.s[i];
 			nextPos++;
-			printf("out of else\n");
+			//printf("out of else\n");
 		}
 	}
 	retVal.ss[ncounter] = *next;
+	printf("Exiting pathSplit\n");
 	return retVal;
 
 }
@@ -124,27 +125,27 @@ stringArray pathSplit(string path){
 
 int reverseTree(struct treeNode* current){
 	printf("Entering reverseTree\n");
-	struct  int_Node node;
+	struct int_Node* node = malloc(sizeof(struct int_Node));
 
 	for(int i = 0; i < 100; i++){
 
 		if(current->dict[i] == NULL){
-			node.dict[i] = -1;
+			node->dict[i] = -1;
 
 		}else{
-			node.dict[i] = reverseTree(current->dict[i]);
+			node->dict[i] = reverseTree(current->dict[i]);
 
 		}
 	}
 
-	strcpy(node.name, current->name);
-	node.isFile = current->isFile;
-	node.inode.size = current->inode.size;
-	node.inode.st_atim = current->inode.st_atim;
-	node.inode.st_mtim = current->inode.st_mtim;
-	node.inode.plist= current->inode.coordinate;
-
-	segment[currentBlock].node = node;
+	strcpy(node->name, current->name);
+	node->isFile = current->isFile;
+	node->inode.size = current->inode.size;
+	node->inode.st_atim = current->inode.st_atim;
+	node->inode.st_mtim = current->inode.st_mtim;
+	node->inode.plist= current->inode.coordinate;
+	printf("Int node, dict[0] is %d\n CurrentBlock = %d\n", node->dict[0], currentBlock);
+	(*segment)[currentBlock].node = *node;
 	currentBlock++;
 	printf("Exiting reverseTree\n");
 
@@ -154,16 +155,28 @@ int reverseTree(struct treeNode* current){
 
 int segmentCtrl(){
 	printf("Entering segmentCTRL\n");
-	if((currentBlock + numberOfNodes) >= SEGMENT_SIZE){
+	if((currentBlock + numberOfNodes) == SEGMENT_SIZE){
 		reverseTree(root);
 		//write out segment
-		fwrite(&segment, BLOCK_SIZE, SEGMENT_SIZE, disk);
+		printf("Before Write\n");
+		int written = fwrite(segment, BLOCK_SIZE, SEGMENT_SIZE, disk);
+		if(written != SEGMENT_SIZE){
+			printf("Write fail, written blocks = %d\n", written);
+		}
+		printf("After Write\n");
+		memset(segment, 0, SEGMENT_SIZE * BLOCK_SIZE);
 		currentSeg++;
+		printf("CurrentSeg = %d\n", currentSeg);
 		currentBlock = 0;
 
 		int array[] = {currentSeg, cleanerSeg};
-		fseek(masterInfo, 0, SEEK_SET);
-		fwrite(array, sizeof(int), 2 , masterInfo);
+		if(fseek(masterInfo, 0, SEEK_SET)){
+			printf("Seek for masterInfo failed\n");
+		}
+		written = fwrite(array, sizeof(int), 2 , masterInfo);
+		if(written != 2){
+			printf("Write to masterInfo failed, written ints = %d\n", written);
+		}
 	}
 	printf("Exiting segmentCtrl\n");
 
@@ -210,19 +223,23 @@ int createNode(const char* path, int isFile){
 
 	if(isFile){
 		struct treeNode* newFile = (struct treeNode*) malloc(sizeof(struct treeNode));
+		printf("inside isFile\n");
                 strcpy(newFile->name, split.ss[k].s); //split[k]
 		//strcpy(newFile->name, split[sizeof(split) / sizeof(split[0])-1]);
 		newFile->isFile = 1;
 		newFile->inode.size = 0;
 		newFile->inode.st_atim = time(NULL);
 		newFile->inode.st_mtim = time(NULL);
+		printf("before calloc\n");
 		newFile->inode.plist = (struct plist*) calloc(128, sizeof(char*));
-
+		printf("after calloc\n");
 		for(int i = 0; i<128; i++){
-			segment[currentBlock].plist[i] = -1;
+			(*segment)[currentBlock].plist[i] = -1;
 		}
+		printf("after loop\n");
 		newFile->inode.coordinate = currentSeg * 65536 + currentBlock;
 		currentBlock++;
+		printf("after coordinate\n");
 
 		for(int i = 0; i < 100; i++){
 			newFile->dict[i] = NULL;
@@ -250,8 +267,10 @@ int createNode(const char* path, int isFile){
 	 		newDir->dict[i] = NULL;
 		}
 		node->dict[j] = newDir;
+
 		printf("Exiting is dir - createNode\n");
 	}
+	numberOfNodes++;
 	printf("Exiting createNode\n");
 
 	return 0;
@@ -319,8 +338,14 @@ int removeNode(const char* path, int isFile){
 		free(current->dict[0]); //changed i to 0
 		current->dict[i] = NULL;
 	}
+	numberOfNodes--;
 
-	current = current->dict[i];
+	if(i<127 && current->dict[i+1] != NULL){
+		int l;
+		for(l = i+1; l<128 && current->dict[l] !=NULL; l++){}
+		current->dict[i] = current->dict[l-1];
+		current->dict[l-1] = NULL;
+	}
 	printf("Exiting removeNode\n");
 	//Remeber to free memory for createnode, findnode and this
 	return 0;
@@ -368,11 +393,17 @@ struct treeNode* findNode(const char* path){
 // finds a block, reads it and saves it in local.
 void* seekNfind(int segment, int block){
 	printf("Entering seekNfind\n");
-
-	void* local = malloc(sizeof(struct int_Node));
+	printf("Segment = %d, Block = %d\n", segment, block);
+	void* local = malloc(BLOCK_SIZE);
+	printf("1\n");
 	int offset = (segment * SEGMENT_SIZE * BLOCK_SIZE) + (block * BLOCK_SIZE);
-	fseek(disk, offset, SEEK_SET);
+	printf("2\n");
+	if(fseek(disk, offset, SEEK_SET)){
+		printf("fseek failed, offset = %d\n",offset);
+	}
+	printf("3\n");
 	int written = fread(local, BLOCK_SIZE, 1, disk);//check if written is 512 bytes
+
 	printf("Exiting seekNfind\n");
 
 	return local;
@@ -380,7 +411,6 @@ void* seekNfind(int segment, int block){
 
 void restoreFile(struct int_Node* node, struct treeNode* tNode){
 	printf("Entering restoreFile\n");
-
 	//tNode->name = node->name;
         strcpy(tNode->name, node->name);
 	tNode->isFile = node->isFile;
@@ -418,8 +448,8 @@ void restoreDir(struct int_Node* node, struct treeNode* tNode){
         tNode->inode.plist = NULL;
 
         int i = 0;
-        while(node->dict[i] == -1){
-
+        while(node->dict[i] != -1){
+		numberOfNodes++;
                 struct int_Node* intNode = (struct int_Node*) seekNfind( (node->dict[i] / 65536), (node->dict[i] % 65536));
                 struct treeNode* treeNode = (struct treeNode*) malloc(sizeof(struct treeNode));
 
@@ -442,12 +472,11 @@ int restoreStructure(){
 	printf("Entering restoreStructure\n");
 
 	//root = currentSeg * SEGMENT_SIZE * BLOCK_SIZE;
-	struct int_Node* node = (struct int_Node*) seekNfind(currentSeg, SEGMENT_SIZE-1); //check if written == 512
-
+	struct int_Node* node = (struct int_Node*) seekNfind(currentSeg-1, SEGMENT_SIZE-1); //check if written == 512
 	numberOfNodes = 1;
 
 	root = (struct treeNode*) malloc(sizeof(struct treeNode));
-
+	printf("Roots name = %s\n",node->name);
         strcpy(root->name, node->name);
 	root->isFile = node->isFile;
 	root->inode.size = node->inode.size;
@@ -456,8 +485,9 @@ int restoreStructure(){
 	root->inode.plist = NULL;
 
 	int i = 0;
-	while(node->dict[i] == -1){
-
+	printf("OKAY BOIS, dict[0] = %d\n", node->dict[i]);
+	while(node->dict[i] != -1){
+		numberOfNodes++;
 		struct int_Node* intNode = (struct int_Node*) seekNfind( (node->dict[i] / 65536), (node->dict[i] % 65536));
 		struct treeNode* treeNode = (struct treeNode*) malloc(sizeof(struct treeNode));
 
@@ -477,16 +507,40 @@ int restoreStructure(){
 }
 
 int init(){
+	printf("---------------------------\n int_node size = %d\n int_Inode size = %d\n union Block size = %d\n-------------------------\n", sizeof(struct int_Node), sizeof(struct int_Inode), sizeof(union block));
 	printf("Entering init\n");
 
+	//Open MasterInfo file
+	if(!(masterInfo = fopen("MasterInfo","r+b"))){
+		if(!(masterInfo = fopen("MasterInfo","w+b"))){
+			printf("Exiting init: master = fopen returns error\n");
+
+			return -1;
+		}
+		printf("New MasterInfo\n");
+		currentSeg = 0;
+		cleanerSeg = 0;
+		int array[] = {currentSeg, cleanerSeg};
+		fwrite(array,sizeof(int),2,masterInfo);
+	}else{
+		printf("Read MasterInfo\n");
+		int segInfo[2];
+		fread(segInfo, sizeof(int),2,masterInfo);
+		currentSeg = segInfo[0];
+		cleanerSeg = segInfo[1];
+		printf("MasterInfo: currentSeg = %d, cleanerSeg = %d\n",segInfo[0],segInfo[1]);
+	}
+
+	segment = malloc(sizeof(union block)*SEGMENT_SIZE);
+
+
 	//Open filesystem file
-	if(!(disk = fopen("FileSystemFile","r+"))){
-		if(!(disk = fopen("FileSystemFile","w+"))){
+	if(!(disk = fopen("FileSystemFile","r+b"))){
+		if(!(disk = fopen("FileSystemFile","w+b"))){
 			printf("Exiting init: disk = fopen returns error\n");
 
 			return -1;
 		}
-
 		numberOfNodes = 1;
 		root = (struct treeNode*) malloc(sizeof(struct treeNode));
 
@@ -502,31 +556,16 @@ int init(){
 		for(int i = 0; i < 100; i++){
 			root->dict[i] = NULL;
 		}
+		currentBlock = SEGMENT_SIZE - numberOfNodes;
+		segmentCtrl();
 
 		//root->dict = NULL; //Linkedlist?
 	}else{
+		fseek(disk, 0, SEEK_SET);
 		//Read the file and setup system
 		restoreStructure();
 	}
-
-	//Open MasterInfo file
-	if(!(masterInfo = fopen("MasterInfo","r+"))){
-		if(!(masterInfo = fopen("MasterInfo","w+"))){
-			printf("Exiting init: master = fopen returns error\n");
-
-			return -1;
-		}
-		currentSeg = -1;
-		cleanerSeg = 0;
-		int array[] = {currentSeg, cleanerSeg};
-		fwrite(array,sizeof(int),2,masterInfo);
-	}else{
-		int segInfo[2];
-		fread(segInfo, sizeof(int),2,masterInfo);
-		currentSeg = segInfo[0];
-		cleanerSeg = segInfo[1];
-	}
-	currentBlock = 0;
+	printf("Number of Nodes: %d\n", numberOfNodes);
 	printf("Exiting init\n");
 
 	return 0;
