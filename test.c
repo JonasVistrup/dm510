@@ -3,90 +3,75 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-char** pathSplit(const char* path){
-	printf("Entering pathsplit\n");
+struct string{
+	char* s;
+	int length;
+};
+typedef struct string string;
 
-	if(!strcmp(path, "/")){
-	printf("Exiting pathsplit: path != \"/\"\n");
-		return NULL;
+struct stringArray{
+	string* ss;
+	int length;
+};
+typedef struct stringArray stringArray;
+
+stringArray pathSplit(string path){
+	printf("In pathsplit\n");
+	if(!strcmp(path.s, "/")){
+		stringArray retVal = {.ss = NULL, .length = 0};
+		return retVal;
 	}
-
-	const char* pathcopy = path;
-	int i = 0;
-
-	for(char c = *pathcopy; c != '\0'; pathcopy ++){
-		c = *pathcopy;
-		if(c == '/'){
-			i++;
+	printf("after root check\n");
+	int counter = 0;
+	for(int i = 0; i < path.length; i++){
+		if(path.s[i] == '/'){
+			counter++;
 		}
 	}
-
-	printf("printing i (size of array): %d\n", i);
-	pathcopy = path + 1;
-
-	char* (*split)[i];
-	split = malloc(sizeof(split));
-
-	printf("printing PATHCOPY: %s\n", pathcopy);
-	printf("printing length of split array: %ld\n", sizeof(*split) / sizeof((*split)[0]));
-
-	i = 0;
-
-	char current[60];
-
-	memset(current, 0, sizeof(current));
-
-	int j = 0;
-
-
-	for(char c = *pathcopy; c != '\0'; pathcopy ++){
-		c = *pathcopy;
-		if(c == '/'){
-			(*split)[i] = current;
-			printf("string printed: %s\n", *split[i]);
-			memset(current, 0, sizeof(current));
-			j = 0;
-			i++;
+	printf("After Counter\n");
+	stringArray retVal;
+	retVal.ss = malloc(sizeof(string)*counter);
+	retVal.length = counter;
+	printf("Counter = %d\n", counter);
+	string* next = malloc(sizeof(string));
+	next->s = malloc(sizeof(char)*60);
+	int nextPos = 0;
+	int ncounter = 0;
+	printf("right before for-loop\n");
+	for(int i = 1; i<path.length; i++){
+		if(path.s[i] == '/'){
+			printf("In if /\n");
+			next->length = nextPos;
+			retVal.ss[ncounter] = *next;
+			ncounter++;
+			nextPos=0;
+			next = malloc(sizeof(string));
+			next->s = malloc(sizeof(char)*60);
+			printf("out of if /\n");
 		}else{
-			current[j] = c;
-			j++;
+			printf("in else\n");
+			next->s[nextPos] = path.s[i];
+			nextPos++;
+			printf("out of else\n");
 		}
-		printf("%c\n",c);
-
 	}
+	retVal.ss[ncounter] = *next;
+	return retVal;
 
-	printf("printing i (number of entries - 1) :  %d\n", i);
-	(*split)[i] = current; //works for now
-
-	char** test = *split;
-
-	printf("printing out *split[0]: %s\n", test[0]);
-        printf("printing out *split[1]: %s\n", test[1]);
-        printf("printing out *split[2]: %s\n", test[2]);
-
-	printf("Exting pathSpilt\n");
-
-	return *split;
 }
+
 
 
 int main( int argc, char *argv[] ) {
 	printf("Entering main\n");
 	//char path[27] = "/mikkel/jonas/thomas/magnus";
-	char path[13] = "/mikkel/jonas";
-
-	printf("PATH = %s\n", path);
-
-
-	char** split = pathSplit(path);
-
-	if(split == NULL){
-		printf("Exiting createNode split == NULL\n");
-		return -1;
+	char* path = "/mikkel/jonas/hello/ho/jo/bo/so";
+	string s = { .s = path, .length = strlen(path)};
+	printf("What?\n");
+	stringArray tokens = pathSplit(s);
+	for(int i=0; i<tokens.length; i++){
+		printf("Token %d: %s\n",i,tokens.ss[i].s);
 	}
-
-	printf("printing length of split: %ld\n", sizeof(*split) / sizeof((*split)[0]));
-
 	printf("Exiting main\n");
 	return 0;
 }
