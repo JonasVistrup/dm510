@@ -6,15 +6,16 @@
 #include "help.h"
 
 void lfs_destroy(void*);
-int lfs_getattr( const char *, struct stat * );
-int lfs_readdir( const char *, void *, fuse_fill_dir_t, off_t, struct fuse_file_info * );
+int lfs_getattr(const char *, struct stat * );
+int lfs_readdir(const char *, void *, fuse_fill_dir_t, off_t, struct fuse_file_info * );
 int lfs_createfile(const char *, mode_t, dev_t);
 int lfs_createdir(const char *, mode_t);
 int lfs_removefile(const char*);
 int lfs_removedir(const char *);
-int lfs_open( const char *, struct fuse_file_info * );
-int lfs_read( const char *, char *, size_t, off_t, struct fuse_file_info * );
+int lfs_open(const char *, struct fuse_file_info * );
+int lfs_read(const char *, char *, size_t, off_t, struct fuse_file_info * );
 int lfs_release(const char *path, struct fuse_file_info *fi);
+int lfs_write(const char *path, const char *content, size_t content_length, off_t offset, struct fuse_file_info *fi);
 
 static struct fuse_operations lfs_oper = {
 	.destroy	= lfs_destroy,
@@ -28,7 +29,7 @@ static struct fuse_operations lfs_oper = {
 	.open		= lfs_open,
 	.read		= lfs_read,
 	.release 	= lfs_release,
-	.write = NULL,
+	.write		= lfs_write,
 	.rename = NULL, //Ignore
 	.utime = NULL
 };
@@ -169,14 +170,31 @@ int lfs_open( const char *path, struct fuse_file_info *fi ) {
 int lfs_read( const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi ) {
    	printf("Entering lfs_read\n");
 
-	printf("read: (path=%s)\n", path);
-	memcpy( buf, "Hello\n", 6 );
+	struct treeNode* node = (struct treeNode*) fi->fh;
+	int startpoint = offset / BLOCK_SIZE;
+	int remainder = offset % BLOCK_SIZE;
+	int amount_read = 0;
+
+	for(int i = startpoint; i<128 && amount_read<size; i++){
+		if(node->inode.plist->p[i] == NULL){
+			size = size - (BLOCK_SIZE - remainder);
+		}else{
+			for(int j = remainder; j<BLOCK_SIZE && amount_read<size; j++){
+				if(node->inode.plist->p[i][j]!=NULL){
+					buf[amount_read] = node->inode.plist->p[i][j];
+					printf("char =%c\n",node->inode.plist->p[i][j]);
+					amount_read++;
+				}
+			}
+		}
+		remainder = 0;
+	}
 	printf("Exiting lfs_read\n");
 
-	return 6;
+	return amount_read;
 }
 
-//Nothing to doe here
+//Nothing to do here
 int lfs_release(const char *path, struct fuse_file_info *fi) {
 	printf("Entering lfs_release\n");
 	printf("release: (path=%s)\n", path);
@@ -186,6 +204,55 @@ int lfs_release(const char *path, struct fuse_file_info *fi) {
 }
 
 
+int lfs_write(const char *path, const char *content, size_t content_length, off_t offset, struct fuse_file_info *fi){
+	printf("Entering lfs_write\n");
+	struct treeNode* node = (struct treeNode*) fi->fh;
+	if(node == NULL){
+		printf("Node is Null\n");
+	}
+	int startingpoint = offset / BLOCK_SIZE;
+	int remainder = offset % BLOCK_SIZE;
+	int currentc = 0;
+	printf("Before f1\n");
+	for(int i = startingpoint; i<128 && currentc<content_length; i++){
+		if(node->inode.plist->p[i] == NULL){
+			node->inode.plist->p[i] = calloc(BLOCK_SIZE, sizeof(char));
+		}
+		for(int j = remainder; j<BLOCK_SIZE && currentc<content_length; j++){
+			node->inode.plist->p[i][j] = content[currentc++];
+		}
+		remainder = 0;
+	}
+	printf("Before f2\n");
+
+	//indsætte blocks i segment
+	int plist[128];
+	for(int i = 0; i<128; i++){
+		printf("i=%d\n",i);
+		if(node->inode.plist->p[i] == NULL){
+			printf("p[i] = null\n");
+			plist[i] = -1;
+		}else{
+			printf("p[i] != null\n");
+			for(int j = 0; j<BLOCK_SIZE; j++){
+				printf("j = %d\n",j);
+				(*segment)[currentBlock].data[j] = node->inode.plist->p[i][j];
+			}
+			plist[i] = currentSeg * 65536 + currentBlock;
+			currentBlock++;
+			segmentCtrl();
+		}
+	}
+	printf("After f1 & f2 \n");
+	for(int i=0; i<128; i++){
+		(*segment)[currentBlock].plist[i] = plist[i];
+	}
+	node->inode.coordinate = currentSeg * 65536 + currentBlock;
+	currentBlock++;
+	segmentCtrl();
+	printf("Exiting lfs_write\n");
+	return currentc;
+}
 
 int main( int argc, char *argv[] ) {
 	printf("Entering main\n");
