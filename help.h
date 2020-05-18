@@ -144,7 +144,7 @@ int reverseTree(struct treeNode* current){
 	node->inode.st_atim = current->inode.st_atim;
 	node->inode.st_mtim = current->inode.st_mtim;
 	node->inode.plist= current->inode.coordinate;
-	printf("Int node, dict[0] is %d\n CurrentBlock = %d\n", node->dict[0], currentBlock);
+	printf("For %s: Int node, dict[0] is %d; CurrentSeg = %d; CurrentBlock = %d\n", node->name, node->dict[0], currentSeg, currentBlock);
 	(*segment)[currentBlock].node = *node;
 	currentBlock++;
 	printf("Exiting reverseTree\n");
@@ -565,6 +565,7 @@ int init(){
 		//Read the file and setup system
 		restoreStructure();
 	}
+	fseek(disk, currentSeg*SEGMENT_SIZE*BLOCK_SIZE, SEEK_SET);
 	printf("Number of Nodes: %d\n", numberOfNodes);
 	printf("Exiting init\n");
 
