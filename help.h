@@ -64,7 +64,7 @@ struct treeNode* root;	//Always the first block
 
 
 struct string{
-	const char* s;
+	char* s;
 	int length;
 };
 typedef struct string string;
@@ -76,6 +76,17 @@ struct stringArray{
 typedef struct stringArray stringArray;
 
 int segmentCtrl();
+
+void freeStringArray(stringArray arr){
+	if(arr.ss == NULL){
+		printf("freeStringArrayError, string is null\n");
+		return;
+	}
+	for(int i=0; i<arr.length; i++){
+		free(arr.ss[i].s);
+	}
+	free(arr.ss);
+}
 
 stringArray pathSplit(string path){
 	printf("In pathsplit\n");
@@ -95,8 +106,7 @@ stringArray pathSplit(string path){
 	retVal.length = counter;
 
 	string* next = malloc(sizeof(string));
-	//next->s
-	char* tmp = malloc(sizeof(char)*60);
+	next->s = malloc(sizeof(char)*60);
 	int nextPos = 0;
 	int ncounter = 0;
 
@@ -104,22 +114,19 @@ stringArray pathSplit(string path){
 		if(path.s[i] == '/'){
 			//printf("In if /\n");
 			next->length = nextPos;
-			next->s = tmp;
 			retVal.ss[ncounter] = *next;
 			ncounter++;
 			nextPos=0;
 			next = malloc(sizeof(string));
-			tmp = malloc(sizeof(char)*60);
+			next->s = malloc(sizeof(char)*60);
 			//printf("out of if /\n");
 		}else{
 			//printf("in else\n");
-			//next->s[nextPost] = path.s[i];
-			tmp[nextPos] = path.s[i];
+			next->s[nextPos] = path.s[i];
 			nextPos++;
 			//printf("out of else\n");
 		}
 	}
-	next->s = tmp;
 	retVal.ss[ncounter] = *next;
 	printf("Exiting pathSplit\n");
 	return retVal;
@@ -160,7 +167,6 @@ void cleaner(struct treeNode* tNode){
 
 
 //creates a file
-
 int reverseTree(struct treeNode* current){
 	printf("Entering reverseTree\n");
 	struct int_Node* node = malloc(sizeof(struct int_Node));
@@ -184,6 +190,7 @@ int reverseTree(struct treeNode* current){
 	node->inode.plist= current->inode.coordinate;
 	printf("For %s: Int node, dict[0] is %d; CurrentSeg = %d; CurrentBlock = %d\n", node->name, node->dict[0], currentSeg, currentBlock);
 	(*segment)[currentBlock].node = *node;
+//	free(node);
 	currentBlock++;
 	printf("Exiting reverseTree\n");
 
@@ -244,7 +251,7 @@ int createNode(const char* path, int isFile){
 	printf("Entering createNode\n");
 	printf("%s\n",path);
 
-	string s =  {.s = path, .length = strlen(path)};
+	string s  ={.s = (char*) path, .length = strlen(path)};
 	stringArray split = pathSplit(s);
 
 	if(split.ss == NULL){
@@ -330,6 +337,9 @@ int createNode(const char* path, int isFile){
 		//printf("Exiting is dir - createNode\n");
 	}
 	numberOfNodes++;
+
+
+	//freeStringArray(split); //ECHO PIPE AND NANO CRASHES
 	printf("Exiting createNode\n");
 
 	return 0;
@@ -341,7 +351,7 @@ int removeNode(const char* path, int isFile){
 
 	struct treeNode* current = root;
 
-	string s = {.s = path, .length = strlen(path)};
+	string s = {.s = (char*)path, .length = strlen(path)};
 	stringArray split = pathSplit(s);
 
 	if(split.ss == NULL){
@@ -412,9 +422,11 @@ int removeNode(const char* path, int isFile){
 	//for(int j=0; j<100 && current->dict[j] != NULL; j++){
 	//	printf("Dict[%d] = %s\n",j,current->dict[j]->name);
 	//}
+
+
+	//freeStringArray(split);	//IF RMNODE IS EVER CALLED, EVERYTHING IS WEIRD AND CHRASHES
 	printf("-----------------------------\n");
 	printf("Exiting removeNode\n");
-	//Remeber to free memory for createnode, findnode and this
 	return 0;
 }
 
@@ -423,7 +435,7 @@ struct treeNode* findNode(const char* path){
 	printf("Entering findNode\n");
 
 	printf("path = %s\n", path);
-	string s = {.s = path, .length = strlen(path)};
+	string s = {.s = (char*)path, .length = strlen(path)};
 
 	stringArray split = pathSplit(s);
 
@@ -452,8 +464,11 @@ struct treeNode* findNode(const char* path){
 
 		node = node->dict[j];
 	}
-	printf("Exiting findNode\n");
 
+
+	//freeStringArray(split); HAVENT TESTED THIS ONE, BUT ASUMES IT KILLS YOUR DOG OR SOMETHING
+
+	printf("Exiting findNode\n");
 	return node;
 }
 
