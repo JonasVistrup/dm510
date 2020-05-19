@@ -236,7 +236,7 @@ int lfs_write(const char *path, const char *content, size_t content_length, off_
 	int startingpoint = offset / BLOCK_SIZE;
 	int remainder = offset % BLOCK_SIZE;
 	int currentc = 0;
-	printf("Before f1\n");
+	//printf("Before f1\n");
 	for(int i = startingpoint; i<128 && currentc<content_length; i++){
 		if(node->inode.plist->p[i] == NULL){
 			node->inode.plist->p[i] = calloc(BLOCK_SIZE, sizeof(char));
@@ -246,27 +246,28 @@ int lfs_write(const char *path, const char *content, size_t content_length, off_
 		}
 		remainder = 0;
 	}
-	printf("Before f2\n");
+	//printf("Before f2\n");
 
 	//indsætte blocks i segment
 	int plist[128];
 	for(int i = 0; i<128; i++){
-		printf("i=%d\n",i);
+		//printf("i=%d\n",i);
 		if(node->inode.plist->p[i] == NULL){
-			printf("p[i] = null\n");
+			//printf("p[i] = null\n");
 			plist[i] = -1;
 		}else{
-			printf("p[i] != null\n");
+			//printf("p[i] != null\n");
 			for(int j = 0; j<BLOCK_SIZE; j++){
-				printf("j = %d\n",j);
+				//printf("j = %d\n",j);
 				(*segment)[currentBlock].data[j] = node->inode.plist->p[i][j];
 			}
 			plist[i] = currentSeg * 65536 + currentBlock;
+			printf("SegInsert data: Seg: %d, Block: %d\n",currentSeg, currentBlock);
 			currentBlock++;
 			segmentCtrl();
 		}
 	}
-	printf("After f1 & f2 \n");
+	//printf("After f1 & f2 \n");
 	for(int i=0; i<128; i++){
 		(*segment)[currentBlock].plist[i] = plist[i];
 	}
@@ -282,6 +283,7 @@ int lfs_write(const char *path, const char *content, size_t content_length, off_
 		}
 	}
 	node->inode.size = size;
+	printf("SegInsert plist: Seg %d, Block %d\n", currentSeg, currentBlock);
 	currentBlock++;
 	segmentCtrl();
 	printf("Exiting lfs_write\n");

@@ -276,37 +276,39 @@ int createNode(const char* path, int isFile){
 
 	if(isFile){
 		struct treeNode* newFile = (struct treeNode*) malloc(sizeof(struct treeNode));
-		printf("inside isFile\n");
+		//printf("inside isFile\n");
                 strcpy(newFile->name, split.ss[k].s); //split[k]
 		//strcpy(newFile->name, split[sizeof(split) / sizeof(split[0])-1]);
 		newFile->isFile = 1;
 		newFile->inode.size = 0;
 		newFile->inode.st_atim = time(NULL);
 		newFile->inode.st_mtim = time(NULL);
-		printf("before calloc\n");
+		//printf("before calloc\n");
 		newFile->inode.plist = (struct plist*) calloc(128, sizeof(char*));
-		printf("after calloc\n");
+		//printf("after calloc\n");
 		for(int i = 0; i<128; i++){
 			(*segment)[currentBlock].plist[i] = -1;
 		}
-		printf("after loop\n");
+		//printf("after loop\n");
 		newFile->inode.coordinate = currentSeg * 65536 + currentBlock;
+		printf("SegInsert plist: Seg: %d, Block: %d\n",currentSeg, currentBlock);
 		currentBlock++;
-		printf("after coordinate\n");
+		segmentCtrl();
+		//printf("after coordinate\n");
 
 		for(int i = 0; i < 100; i++){
 			newFile->dict[i] = NULL;
 		}
 		node->dict[j] = newFile;
 	}else{
-		printf("is dir - createNode\n");
+		//printf("is dir - createNode\n");
 
 		struct treeNode* newDir = (struct treeNode*) malloc(sizeof(struct treeNode));
 		//the splitted path disappears when we malloc memory for a treeNode
 
-		printf("Before string cp\n");
+		//printf("Before string cp\n");
                 strcpy(newDir->name, split.ss[k].s); //split[k]
-		printf("After string cp\n");
+		//printf("After string cp\n");
                 newDir->isFile = 0;
                	newDir->inode.size = 0;
            	newDir->inode.st_atim = time(NULL);
@@ -314,14 +316,14 @@ int createNode(const char* path, int isFile){
 		newDir->inode.coordinate = -1;
                 newDir->inode.plist = NULL;
 
-		printf("Before for - createNode\n");
+		//printf("Before for - createNode\n");
 
 	        for(int i = 0; i < 100; i++){
 	 		newDir->dict[i] = NULL;
 		}
 		node->dict[j] = newDir;
 
-		printf("Exiting is dir - createNode\n");
+		//printf("Exiting is dir - createNode\n");
 	}
 	numberOfNodes++;
 	printf("Exiting createNode\n");
@@ -456,7 +458,9 @@ void* seekNfind(int segment, int block){
 	}
 	printf("3\n");
 	int written = fread(local, BLOCK_SIZE, 1, disk);//check if written is 512 bytes
-
+	if(written != 1){
+		printf("Write fail, written=%d\n",written);
+	}
 	printf("Exiting seekNfind\n");
 
 	return local;
@@ -470,7 +474,7 @@ void restoreFile(struct int_Node* node, struct treeNode* tNode){
         tNode->inode.size = node->inode.size;
         tNode->inode.st_atim = node->inode.st_atim;
         tNode->inode.st_mtim = node->inode.st_mtim;
-
+	tNode->inode.coordinate = node->inode.plist;
 	int (*ptr)[128]	= ((int(*)[128]) seekNfind(node->inode.plist / 65536, node->inode.plist % 65536));
 	struct plist* pl = malloc(sizeof(struct plist));
 
@@ -525,7 +529,12 @@ int restoreStructure(){
 	printf("Entering restoreStructure\n");
 
 	//root = currentSeg * SEGMENT_SIZE * BLOCK_SIZE;
-	struct int_Node* node = (struct int_Node*) seekNfind(currentSeg-1, SEGMENT_SIZE-1); //check if written == 512
+	struct int_Node* node;
+	if(currentSeg==0){
+		node = (struct int_Node*) seekNfind(TOTAL_SIZE-1, SEGMENT_SIZE-1); //check if written == 512
+	}else{
+		node = (struct int_Node*) seekNfind(currentSeg-1, SEGMENT_SIZE-1); //check if written == 512
+	}
 	numberOfNodes = 1;
 
 	root = (struct treeNode*) malloc(sizeof(struct treeNode));
@@ -571,7 +580,7 @@ int init(){
 			return -1;
 		}
 		printf("New MasterInfo\n");
-		currentSeg = 948;
+		currentSeg = 0;
 		cleanerSeg = 0;
 		int array[] = {currentSeg, cleanerSeg};
 		fwrite(array,sizeof(int),2,masterInfo);
