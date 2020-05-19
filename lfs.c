@@ -12,6 +12,7 @@ int lfs_createfile(const char *, mode_t, dev_t);
 int lfs_createdir(const char *, mode_t);
 int lfs_removefile(const char*);
 int lfs_removedir(const char *);
+int lfs_truncate(const char *path, off_t offset);
 int lfs_open(const char *, struct fuse_file_info * );
 int lfs_read(const char *, char *, size_t, off_t, struct fuse_file_info * );
 int lfs_release(const char *path, struct fuse_file_info *fi);
@@ -25,7 +26,7 @@ static struct fuse_operations lfs_oper = {
 	.mkdir 		= lfs_createdir,
 	.unlink 	= lfs_removefile,
 	.rmdir 		= lfs_removedir,
-	.truncate = NULL,
+	.truncate 	= lfs_truncate,
 	.open		= lfs_open,
 	.read		= lfs_read,
 	.release 	= lfs_release,
@@ -153,6 +154,28 @@ int lfs_removedir(const char *path){
 
 	return 0;
 }
+int lfs_truncate(const char *path, off_t offset) {
+	printf("Entering lfs_truncate\n");
+
+	(void)offset; // Worthless
+	struct treeNode* node = findNode(path);
+	for(int i=0; i<128; i++){
+		if(node->inode.plist->p[i] != NULL){
+			free(node->inode.plist->p[i]);
+			node->inode.plist->p[i] = NULL;
+		}
+	}
+	for(int i=0; i<128; i++){
+		(*segment)[currentBlock].plist[i] = -1;
+	}
+	node->inode.coordinate = currentSeg * 65536 + currentBlock;
+	currentBlock++;
+	segmentCtrl();
+	node->inode.size = 0;
+	printf("Exiting lfs_truncate\n");
+
+	return 0;
+}
 
 //Permission
 int lfs_open( const char *path, struct fuse_file_info *fi ) {
@@ -180,7 +203,7 @@ int lfs_read( const char *path, char *buf, size_t size, off_t offset, struct fus
 			size = size - (BLOCK_SIZE - remainder);
 		}else{
 			for(int j = remainder; j<BLOCK_SIZE && amount_read<size; j++){
-				if(node->inode.plist->p[i][j]!=NULL){
+				if(node->inode.plist->p[i][j]!='\0'){
 					buf[amount_read] = node->inode.plist->p[i][j];
 					printf("char =%c\n",node->inode.plist->p[i][j]);
 					amount_read++;
@@ -248,6 +271,17 @@ int lfs_write(const char *path, const char *content, size_t content_length, off_
 		(*segment)[currentBlock].plist[i] = plist[i];
 	}
 	node->inode.coordinate = currentSeg * 65536 + currentBlock;
+	int size = 0;
+	for(int i=0; i<128; i++){
+		if(node->inode.plist->p[i] != NULL){
+			for(int j=0; j<BLOCK_SIZE; j++){
+				if(node->inode.plist->p[i][j] != '\0'){
+					size++;
+				}
+			}
+		}
+	}
+	node->inode.size = size;
 	currentBlock++;
 	segmentCtrl();
 	printf("Exiting lfs_write\n");

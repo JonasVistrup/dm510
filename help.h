@@ -75,6 +75,8 @@ struct stringArray{
 };
 typedef struct stringArray stringArray;
 
+int segmentCtrl();
+
 stringArray pathSplit(string path){
 	printf("In pathsplit\n");
 	if(!strcmp(path.s, "/")){
@@ -118,6 +120,38 @@ stringArray pathSplit(string path){
 	printf("Exiting pathSplit\n");
 	return retVal;
 
+}
+
+int cleaner(struct treeNode* tNode){
+	printf("Entering Cleaner for node: %s\n", tNode->name);
+	if(tNode->isFile){
+		int plist[128];
+		for(int i = 0; i < 128; i++){
+			if(tNode->inode.plist->p[i] == NULL){
+				plist[i] = -1;
+			}else{
+				for(int j = 0; j<BLOCK_SIZE; j++){
+					(*segment)[currentBlock].data[j] = tNode->inode.plist->p[i][j];
+				}
+				plist[i] = currentSeg * 65536 + currentBlock;
+				currentBlock++;
+				segmentCtrl();
+			}
+		}
+		for(int i = 0; i<128; i++){
+			(*segment)[currentBlock].plist[i] = plist[i];
+		}
+		tNode->inode.coordinate = currentSeg * 65536 + currentBlock;
+		currentBlock++;
+		segmentCtrl();
+	}else{
+		for(int i = 0; i < 100 && tNode->dict[i] != NULL; i++){
+			cleaner(tNode->dict[i]);
+		}
+	}
+
+
+	printf("Exit Cleaner for node: %s\n", tNode->name);
 }
 
 
@@ -166,6 +200,10 @@ int segmentCtrl(){
 		printf("After Write\n");
 		memset(segment, 0, SEGMENT_SIZE * BLOCK_SIZE);
 		currentSeg++;
+		if(currentSeg == TOTAL_SIZE){
+			fseek(disk, 0, SEEK_SET);
+			currentSeg = 0;
+		}
 		printf("CurrentSeg = %d\n", currentSeg);
 		currentBlock = 0;
 
@@ -176,6 +214,21 @@ int segmentCtrl(){
 		written = fwrite(array, sizeof(int), 2 , masterInfo);
 		if(written != 2){
 			printf("Write to masterInfo failed, written ints = %d\n", written);
+		}
+		if(cleanerSeg<currentSeg){
+			if(TOTAL_SIZE - currentSeg + cleanerSeg <=50){
+				cleanerSeg = currentSeg;
+				cleaner(root);
+				currentBlock = SEGMENT_SIZE - numberOfNodes;
+				segmentCtrl();
+			}
+		}else{
+			if(cleanerSeg - currentSeg <=50){
+				cleanerSeg = currentSeg;
+				cleaner(root);
+				currentBlock = SEGMENT_SIZE - numberOfNodes;
+				segmentCtrl();
+			}
 		}
 	}
 	printf("Exiting segmentCtrl\n");
@@ -518,7 +571,7 @@ int init(){
 			return -1;
 		}
 		printf("New MasterInfo\n");
-		currentSeg = 0;
+		currentSeg = 948;
 		cleanerSeg = 0;
 		int array[] = {currentSeg, cleanerSeg};
 		fwrite(array,sizeof(int),2,masterInfo);
