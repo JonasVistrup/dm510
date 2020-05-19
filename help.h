@@ -64,7 +64,7 @@ struct treeNode* root;	//Always the first block
 
 
 struct string{
-	char* s;
+	const char* s;
 	int length;
 };
 typedef struct string string;
@@ -95,7 +95,8 @@ stringArray pathSplit(string path){
 	retVal.length = counter;
 
 	string* next = malloc(sizeof(string));
-	next->s = malloc(sizeof(char)*60);
+	//next->s
+	char* tmp = malloc(sizeof(char)*60);
 	int nextPos = 0;
 	int ncounter = 0;
 
@@ -103,26 +104,29 @@ stringArray pathSplit(string path){
 		if(path.s[i] == '/'){
 			//printf("In if /\n");
 			next->length = nextPos;
+			next->s = tmp;
 			retVal.ss[ncounter] = *next;
 			ncounter++;
 			nextPos=0;
 			next = malloc(sizeof(string));
-			next->s = malloc(sizeof(char)*60);
+			tmp = malloc(sizeof(char)*60);
 			//printf("out of if /\n");
 		}else{
 			//printf("in else\n");
-			next->s[nextPos] = path.s[i];
+			//next->s[nextPost] = path.s[i];
+			tmp[nextPos] = path.s[i];
 			nextPos++;
 			//printf("out of else\n");
 		}
 	}
+	next->s = tmp;
 	retVal.ss[ncounter] = *next;
 	printf("Exiting pathSplit\n");
 	return retVal;
 
 }
 
-int cleaner(struct treeNode* tNode){
+void cleaner(struct treeNode* tNode){
 	printf("Entering Cleaner for node: %s\n", tNode->name);
 	if(tNode->isFile){
 		int plist[128];
@@ -357,7 +361,6 @@ int removeNode(const char* path, int isFile){
 			printf("Exiting removeNode j== 100 or node->dict[j] == NULL\n");
 			return -ENOENT;
 		}
-		printf("HEEEELLLOOOOOOO\n");
 		current = current->dict[j];
 	}
 
@@ -367,6 +370,10 @@ int removeNode(const char* path, int isFile){
 	}
 	if(i == 100){
 		printf("Exiting removeNode: i == 100\n");
+		return -1;
+	}
+	if(current->dict[i] == NULL){
+		printf("Exiting removeNode: dict[i] == NULL");
 		return -1;
 	}
 
@@ -395,12 +402,17 @@ int removeNode(const char* path, int isFile){
 	}
 	numberOfNodes--;
 
-	if(i<127 && current->dict[i+1] != NULL){
+	if(i<99 && current->dict[i+1] != NULL){
 		int l;
-		for(l = i+1; l<128 && current->dict[l] !=NULL; l++){}
+		for(l = i+1; l<100 && current->dict[l] !=NULL; l++){}
 		current->dict[i] = current->dict[l-1];
 		current->dict[l-1] = NULL;
 	}
+	//printf("-----------------------------\n");
+	//for(int j=0; j<100 && current->dict[j] != NULL; j++){
+	//	printf("Dict[%d] = %s\n",j,current->dict[j]->name);
+	//}
+	printf("-----------------------------\n");
 	printf("Exiting removeNode\n");
 	//Remeber to free memory for createnode, findnode and this
 	return 0;
@@ -569,7 +581,7 @@ int restoreStructure(){
 }
 
 int init(){
-	printf("---------------------------\n int_node size = %d\n int_Inode size = %d\n union Block size = %d\n-------------------------\n", sizeof(struct int_Node), sizeof(struct int_Inode), sizeof(union block));
+	printf("---------------------------\n int_node size = %ld\n int_Inode size = %ld\n union Block size = %ld\n-------------------------\n", sizeof(struct int_Node), sizeof(struct int_Inode), sizeof(union block));
 	printf("Entering init\n");
 
 	//Open MasterInfo file
@@ -587,7 +599,10 @@ int init(){
 	}else{
 		printf("Read MasterInfo\n");
 		int segInfo[2];
-		fread(segInfo, sizeof(int),2,masterInfo);
+		int read = fread(segInfo, sizeof(int),2,masterInfo);
+		if(read != 2){
+			printf("MasterInfo read failed, read=%d\n", read);
+		}
 		currentSeg = segInfo[0];
 		cleanerSeg = segInfo[1];
 		printf("MasterInfo: currentSeg = %d, cleanerSeg = %d\n",segInfo[0],segInfo[1]);
