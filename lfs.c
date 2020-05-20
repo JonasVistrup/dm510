@@ -46,7 +46,7 @@ void lfs_destroy(void* private_data){
 
 
 	//2 free memory
-
+	llClean(head);
 
 
 
@@ -110,12 +110,17 @@ int lfs_readdir( const char *path, void *buf, fuse_fill_dir_t filler, off_t offs
 	printf("path = %s\n", path);
 
 	struct treeNode* node = findNode(path);
+	if(node == NULL){
+		printf("Node is NULL\n");
+		return -1;
+	}
+
 
 	filler(buf, ".", NULL, 0);
 	filler(buf, "..", NULL, 0);
 
 	for(int i = 0; i<100 && node->dict[i] != NULL; i++){
-
+		printf("%s->dict[%d] = %s\n", node->name, i, node->dict[i]->name);
 		filler(buf, node->dict[i]->name, NULL, 0);
 
 	}

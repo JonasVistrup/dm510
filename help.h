@@ -75,21 +75,47 @@ struct stringArray{
 };
 typedef struct stringArray stringArray;
 
+typedef struct ll ll;
+struct ll{
+	ll* next;
+	void* d;
+};
+
+ll* head;
+
+
 int segmentCtrl();
 
-void freeStringArray(stringArray arr){
-	if(arr.ss == NULL){
-		printf("freeStringArrayError, string is null\n");
+
+void llClean(ll* current){
+	if(current != NULL){
+		llClean(current->next);
+		free(current->d);
+		free(current);
+	}
+}
+
+void llInsert(void* data){
+	ll* current = head;
+	if(current == NULL){
+		head = malloc(sizeof(ll));
+		head->next = NULL;
+		head->d = data;
 		return;
 	}
-	for(int i=0; i<arr.length-1; i++){
-		free(arr.ss[i].s);
+	while(current->next != NULL){
+		current = current->next;
 	}
-	free(arr.ss);
+	current->next = malloc(sizeof(ll));
+	current->next->next = NULL;
+	current->next->d = data;
+	return;
 }
 
 stringArray pathSplit(string path){
 	printf("In pathsplit\n");
+	printf("String path = %s\nString length = %d\n",path.s,path.length);
+
 	if(!strcmp(path.s, "/")){
 		stringArray retVal = {.ss = NULL, .length = 0};
 		return retVal;
@@ -106,7 +132,8 @@ stringArray pathSplit(string path){
 	retVal.length = counter;
 
 	string* next = malloc(sizeof(string));
-	next->s = malloc(sizeof(char)*60);
+	next->s = calloc(76, sizeof(char));
+	llInsert(next->s);
 	int nextPos = 0;
 	int ncounter = 0;
 
@@ -117,12 +144,14 @@ stringArray pathSplit(string path){
 			ncounter++;
 			nextPos=0;
 			next = malloc(sizeof(string));
-			next->s = malloc(sizeof(char)*60);
+			next->s = calloc(76, sizeof(char));
+			llInsert(next->s);
 		}else{
 			next->s[nextPos] = path.s[i];
 			nextPos++;
 		}
 	}
+	next->length = nextPos;
 	retVal.ss[ncounter] = *next;
 	printf("Exiting pathSplit\n");
 	return retVal;
@@ -279,7 +308,7 @@ int createNode(const char* path, int isFile){
 
 	if(isFile){
 		struct treeNode* newFile = (struct treeNode*) malloc(sizeof(struct treeNode));
-                strcpy(newFile->name, split.ss[k].s); //split[k]
+                strcpy(newFile->name, split.ss[k].s);
 		newFile->isFile = 1;
 		newFile->inode.size = 0;
 		newFile->inode.st_atim = time(NULL);
@@ -316,8 +345,8 @@ int createNode(const char* path, int isFile){
 	}
 	numberOfNodes++;
 
-
-	freeStringArray(split);
+	//free(split.ss);
+	//freeStringArray(split);
 	printf("Exiting createNode\n");
 
 	return 0;
@@ -395,7 +424,7 @@ int removeNode(const char* path, int isFile){
 		current->dict[l-1] = NULL;
 	}
 
-	freeStringArray(split);
+	//free(split.ss);
 	printf("Exiting removeNode\n");
 	return 0;
 }
@@ -420,19 +449,24 @@ struct treeNode* findNode(const char* path){
 	int j;
 
 	for(int i = 0; i < split.length; i++){
+		printf("Split[%d] = %s\n", i, split.ss[i].s);
 
-		for(j = 0; j < 100 && node->dict[j] != NULL && strcmp(node->dict[j]->name, split.ss[i].s); j++){}
+		for(j = 0; j < 100 && node->dict[j] != NULL && strcmp(node->dict[j]->name, split.ss[i].s); j++){
+			printf("dict[%d] = %s\n", j, node->dict[j]->name);
+		}
 
-		if(j == 100 || node->dict[j] == NULL){
-			printf("Exiting findNode j== 100 or node->dict[j] == NULL\n");
-
+		if(j == 100){
+			printf("Exiting findNode j=100\n");
+			return NULL;
+		}else if(node->dict[j] == NULL){
+			printf("Exiting findNode for i=%d dict[%d] = NULL\n",i, j);
 			return NULL;
 		}
 
 		node = node->dict[j];
 	}
 
-
+	//free(split.ss);
 	//freeStringArray(split); //HAVENT TESTED THIS ONE, BUT ASUMES IT KILLS YOUR DOG OR SOMETHING
 
 	printf("Exiting findNode\n");
