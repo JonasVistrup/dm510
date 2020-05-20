@@ -139,9 +139,11 @@ stringArray pathSplit(string path){
 	}
 	stringArray retVal;
 	retVal.ss = malloc(sizeof(string)*counter);
+	llInsert(retVal.ss);
 	retVal.length = counter;
 
 	string* next = malloc(sizeof(string));
+	llInsert(next);
 	next->s = calloc(76, sizeof(char));
 	llInsert(next->s);
 	int nextPos = 0;
@@ -154,6 +156,7 @@ stringArray pathSplit(string path){
 			ncounter++;
 			nextPos=0;
 			next = malloc(sizeof(string));
+			llInsert(next);
 			next->s = calloc(76, sizeof(char));
 			llInsert(next->s);
 		}else{
@@ -629,7 +632,7 @@ int init(){
 	}
 
 	segment = malloc(sizeof(union block)*SEGMENT_SIZE);
-
+	llInsert(segment);
 
 	//Open filesystem file
 	if(!(disk = fopen("FileSystemFile","r+b"))){
