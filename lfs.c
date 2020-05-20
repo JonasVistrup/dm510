@@ -32,7 +32,7 @@ static struct fuse_operations lfs_oper = {
 	.release 	= lfs_release,
 	.write		= lfs_write,
 	.rename = NULL, //Ignore
-	.utime = NULL
+	.utime = NULL	//Ignore
 };
 
 void lfs_destroy(void* private_data){
@@ -73,7 +73,7 @@ int lfs_getattr( const char *path, struct stat *stbuf ) {
         struct timespec m;
 
 	if(node == NULL){
-	printf("Exiting lfs_getattr: node == NULL\n");
+		printf("Exiting lfs_getattr: node == NULL\n");
 		return -ENOENT;
 	}
 
@@ -107,7 +107,7 @@ int lfs_getattr( const char *path, struct stat *stbuf ) {
 int lfs_readdir( const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi ) {
 	printf("Entering lfs_readdir\n");
 
-	printf("readdir: (path=%s)\n", path);
+	printf("path = %s\n", path);
 
 	struct treeNode* node = findNode(path);
 
@@ -156,9 +156,12 @@ int lfs_removedir(const char *path){
 }
 int lfs_truncate(const char *path, off_t offset) {
 	printf("Entering lfs_truncate\n");
+	(void)offset;
 
-	(void)offset; // Worthless
 	struct treeNode* node = findNode(path);
+	if(node == NULL){
+		return -1;
+	}
 	for(int i=0; i<128; i++){
 		if(node->inode.plist->p[i] != NULL){
 			free(node->inode.plist->p[i]);
@@ -177,7 +180,7 @@ int lfs_truncate(const char *path, off_t offset) {
 	return 0;
 }
 
-//Permission
+
 int lfs_open( const char *path, struct fuse_file_info *fi ) {
 	printf("Entering lfs_open\n");
 	printf("open: (path=%s)\n", path);
@@ -220,9 +223,7 @@ int lfs_read( const char *path, char *buf, size_t size, off_t offset, struct fus
 //Nothing to do here
 int lfs_release(const char *path, struct fuse_file_info *fi) {
 	printf("Entering lfs_release\n");
-	printf("release: (path=%s)\n", path);
 	printf("Exiting lfs_release\n");
-
 	return 0;
 }
 
@@ -236,7 +237,6 @@ int lfs_write(const char *path, const char *content, size_t content_length, off_
 	int startingpoint = offset / BLOCK_SIZE;
 	int remainder = offset % BLOCK_SIZE;
 	int currentc = 0;
-	//printf("Before f1\n");
 	for(int i = startingpoint; i<128 && currentc<content_length; i++){
 		if(node->inode.plist->p[i] == NULL){
 			node->inode.plist->p[i] = calloc(BLOCK_SIZE, sizeof(char));
@@ -246,19 +246,14 @@ int lfs_write(const char *path, const char *content, size_t content_length, off_
 		}
 		remainder = 0;
 	}
-	//printf("Before f2\n");
 
-	//indsætte blocks i segment
+	//insert blocks into segments
 	int plist[128];
 	for(int i = 0; i<128; i++){
-		//printf("i=%d\n",i);
 		if(node->inode.plist->p[i] == NULL){
-			//printf("p[i] = null\n");
 			plist[i] = -1;
 		}else{
-			//printf("p[i] != null\n");
 			for(int j = 0; j<BLOCK_SIZE; j++){
-				//printf("j = %d\n",j);
 				(*segment)[currentBlock].data[j] = node->inode.plist->p[i][j];
 			}
 			plist[i] = currentSeg * 65536 + currentBlock;
@@ -267,7 +262,7 @@ int lfs_write(const char *path, const char *content, size_t content_length, off_
 			segmentCtrl();
 		}
 	}
-	//printf("After f1 & f2 \n");
+
 	for(int i=0; i<128; i++){
 		(*segment)[currentBlock].plist[i] = plist[i];
 	}
