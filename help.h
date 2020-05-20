@@ -8,11 +8,14 @@
 #define SEGMENT_SIZE 2048	//number of blocks in a segment
 #define TOTAL_SIZE 1000		//number of segments in storage
 
+
+//list of pointers to data
 struct plist{
 	char* p[128];
 };
 
 
+//Filesystem version of a file's or directory's Inode
 struct int_Inode{
         size_t size;
         time_t st_atim;
@@ -20,6 +23,7 @@ struct int_Inode{
         int plist;
 };
 
+//Filesystem version of a file or directory
 struct int_Node{	//size = 512 bytes
 	int isFile;
         char name[76];
@@ -27,6 +31,7 @@ struct int_Node{	//size = 512 bytes
         int dict[100];
 };
 
+//Main memory version of a file's or directory's Inode
 struct Inode{
 	size_t size;
 	time_t st_atim;
@@ -35,6 +40,7 @@ struct Inode{
 	struct plist* plist;
 };
 
+//Main memory version of a file or directory, directories takes a tree structure
 struct treeNode{
 	int isFile;
 	char name[76];
@@ -42,51 +48,53 @@ struct treeNode{
 	struct treeNode* dict[100];
 };
 
+//Union of the type of data stored in a segments
 union block{
-	struct int_Node node;
-	int plist[128];
-	char data[BLOCK_SIZE];
+	struct int_Node node;	//Node
+	int plist[128];		//Indirect Pointers
+	char data[BLOCK_SIZE];	//Pure data, in the forms of char
 };
 
 
-union block (*segment)[SEGMENT_SIZE];
+union block (*segment)[SEGMENT_SIZE];	//Current segment
 
-static FILE* disk;
-static FILE* masterInfo;
+static FILE* disk;			//File for storing the log based filesystem
+static FILE* masterInfo;		//File for storing the info needed to maintain a log based filesystem
 
-int currentBlock;
-int cleanerSeg;
-int currentSeg;
-int numberOfNodes;
+int currentBlock;	//Next block to be written to in segment
+int cleanerSeg;		//First uncleaned segment
+int currentSeg;		//Next segment to written to disk
+int numberOfNodes;	//Number of files and directories
 
-struct treeNode* root;
+struct treeNode* root;	//Root directory
 
 
 
-struct string{
+struct string{		//String struct
 	char* s;
 	int length;
 };
 typedef struct string string;
 
-struct stringArray{
+struct stringArray{	//String array struct
 	string* ss;
 	int length;
 };
 typedef struct stringArray stringArray;
 
-typedef struct ll ll;
+typedef struct ll ll;	//Linkedlist containing allocated pointers
 struct ll{
-	ll* next;
-	void* d;
+	ll* next;	//Next linkedlist
+	void* d;	//allocated pointer
 };
 
-ll* head;
+ll* head;		//Head of linkedlist
 
 
-int segmentCtrl();
+int segmentCtrl();	//Only function need to be declared, all other follows a hierarchi
 
 
+//Recursivly frees the allocated pointers in the LinkedList, and frees the LinkedList
 void llClean(ll* current){
 	if(current != NULL){
 		llClean(current->next);
@@ -95,6 +103,7 @@ void llClean(ll* current){
 	}
 }
 
+//Inserts a pointer into the linkedlist
 void llInsert(void* data){
 	ll* current = head;
 	if(current == NULL){
@@ -112,6 +121,7 @@ void llInsert(void* data){
 	return;
 }
 
+//Splits a path into tokens using the delimter '/' and the string struct
 stringArray pathSplit(string path){
 	printf("In pathsplit\n");
 	printf("String path = %s\nString length = %d\n",path.s,path.length);
@@ -158,6 +168,7 @@ stringArray pathSplit(string path){
 
 }
 
+//Cleaner function, cleans all segments by finding all active info in the root tree and rewriting it to disk
 void cleaner(struct treeNode* tNode){
 	printf("Entering Cleaner for node: %s\n", tNode->name);
 	if(tNode->isFile){
@@ -191,7 +202,7 @@ void cleaner(struct treeNode* tNode){
 }
 
 
-//creates a file
+//Recursivly inserts the nodes into the current segment, in such a way that the root is the last block inserted
 int reverseTree(struct treeNode* current){
 	printf("Entering reverseTree\n");
 	struct int_Node* node = malloc(sizeof(struct int_Node));
@@ -268,6 +279,7 @@ int segmentCtrl(){
 	return 0;
 }
 
+//Creates a node, either a file or a directory
 int createNode(const char* path, int isFile){
 	printf("Entering createNode\n");
 	printf("path = %s\n",path);
@@ -352,6 +364,7 @@ int createNode(const char* path, int isFile){
 	return 0;
 }
 
+//Removes a node, either a file or directory
 int removeNode(const char* path, int isFile){
 	printf("Entering removeNode \n");
 	printf("%s\n",path);
@@ -473,7 +486,7 @@ struct treeNode* findNode(const char* path){
 	return node;
 }
 
-// finds a block, reads it and saves it in local.
+//finds a block, reads it and returns a pointer to it.
 void* seekNfind(int segment, int block){
 	printf("Entering seekNfind\n");
 	printf("seekSegment = %d, seekBlock = %d\n", segment, block);
@@ -491,9 +504,10 @@ void* seekNfind(int segment, int block){
 	return local;
 }
 
+
+//Imports a file to main memory from the disk
 void restoreFile(struct int_Node* node, struct treeNode* tNode){
 	printf("Entering restoreFile\n");
-	//tNode->name = node->name;
         strcpy(tNode->name, node->name);
 	tNode->isFile = node->isFile;
         tNode->inode.size = node->inode.size;
@@ -518,7 +532,7 @@ void restoreFile(struct int_Node* node, struct treeNode* tNode){
 
 }
 
-
+//Imports a directory to main memory from a disk
 void restoreDir(struct int_Node* node, struct treeNode* tNode){
 	printf("Entering restoreDir\n");
         strcpy(tNode->name, node->name);
@@ -530,8 +544,6 @@ void restoreDir(struct int_Node* node, struct treeNode* tNode){
 
 	printf("Dir name = %s\n", tNode->name);
 
-        //int i = 0;
-        //while(node->dict[i] != -1){
 	for(int i = 0; i<100 && node->dict[i] != -1; i++){
 		numberOfNodes++;
                 struct int_Node* intNode = (struct int_Node*) seekNfind( (node->dict[i] / 65536), (node->dict[i] % 65536));
@@ -544,14 +556,13 @@ void restoreDir(struct int_Node* node, struct treeNode* tNode){
                         restoreDir(intNode, treeNode);
                 }
                 tNode->dict[i] = treeNode;
-                //i++;
         }
         free(node);
 	printf("Exiting restoreDir\n");
 
 }
 
-// to be deleted:
+//Imports root to main memory from disk
 int restoreStructure(){
 	printf("Entering restoreStructure\n");
 
@@ -572,8 +583,6 @@ int restoreStructure(){
 	root->inode.st_mtim = node->inode.st_mtim;
 	root->inode.plist = NULL;
 
-//	int i = 0;
-//	while(node->dict[i] != -1){
 	for(int i=0; i<100 && node->dict[i] != -1; i++){
 		numberOfNodes++;
 		struct int_Node* intNode = (struct int_Node*) seekNfind( (node->dict[i] / 65536), (node->dict[i] % 65536));
@@ -586,7 +595,6 @@ int restoreStructure(){
 			restoreDir(intNode, treeNode);
 		}
 		root->dict[i] = treeNode;
-//		i++;
 	}
 	free(node);
 	printf("Exiting restoreStructure\n");
@@ -594,6 +602,7 @@ int restoreStructure(){
 	return 0;
 }
 
+//Initiate filesystem
 int init(){
 	printf("Entering init\n");
 
