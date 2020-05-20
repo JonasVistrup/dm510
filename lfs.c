@@ -116,7 +116,6 @@ int lfs_readdir( const char *path, void *buf, fuse_fill_dir_t filler, off_t offs
 	for(int i = 0; i<100 && node->dict[i] != NULL; i++){
 		printf("%s->dict[%d] = %s\n", node->name, i, node->dict[i]->name);
 		filler(buf, node->dict[i]->name, NULL, 0);
-
 	}
 	printf("Exiting lfs_readdir\n");
 
@@ -178,8 +177,12 @@ int lfs_truncate(const char *path, off_t offset) {
 	currentBlock++;
 	segmentCtrl();
 	node->inode.size = 0;
-	printf("Exiting lfs_truncate\n");
 
+	node->inode.st_atim = time(NULL);
+	node->inode.st_mtim = time(NULL);
+
+
+	printf("Exiting lfs_truncate\n");
 	return 0;
 }
 
@@ -189,6 +192,7 @@ int lfs_open( const char *path, struct fuse_file_info *fi ) {
 	printf("open: (path=%s)\n", path);
 
 	struct treeNode* node = findNode(path);
+	node->inode.st_atim = time(NULL);
 
 	fi->fh = (uint64_t) node;
 	printf("Exiting lfs_open\n");
@@ -221,8 +225,10 @@ int lfs_read( const char *path, char *buf, size_t size, off_t offset, struct fus
 		}
 		remainder = 0;
 	}
-	printf("Exiting lfs_read\n");
 
+	node->inode.st_atim = time(NULL);
+
+	printf("Exiting lfs_read\n");
 	return amount_read;
 }
 
@@ -287,6 +293,10 @@ int lfs_write(const char *path, const char *content, size_t content_length, off_
 	printf("SegInsert plist: Seg %d, Block %d\n", currentSeg, currentBlock);
 	currentBlock++;
 	segmentCtrl();
+
+	node->inode.st_atim = time(NULL);
+	node->inode.st_mtim = time(NULL);
+
 	printf("Exiting lfs_write\n");
 	return currentc;
 }
