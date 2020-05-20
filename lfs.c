@@ -35,30 +35,19 @@ static struct fuse_operations lfs_oper = {
 	.utime = NULL	//Ignore
 };
 
-// Saves our segments to FilesystemFile and frees memory called when umounting:
+/*  Saves our segments into FilesystemFile and saves the current segment 
+ *  and the cleaner segment into MasterInfo. Frees memory atfterwards:
+ */
 void lfs_destroy(void* private_data){
 	printf("Entering destroy\n");
 	//1 gem segment i filesystemfile
 	currentBlock = SEGMENT_SIZE-numberOfNodes;
 	segmentCtrl();
-
-
-
-
-
+	
 	//2 free memory
 	llClean(head);
 
-
-
-
-
-
-
-
-
-
-	fclose(masterInfo);
+	fclose(masterinfo);
 	fclose(disk);
 	printf("Exiting lfs_destroy\n");
 }
