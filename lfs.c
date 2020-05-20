@@ -35,33 +35,24 @@ static struct fuse_operations lfs_oper = {
 	.utime = NULL	//Ignore
 };
 
+/*  Saves our segments into FilesystemFile and saves the current segment 
+ *  and the cleaner segment into MasterInfo. Frees memory atfterwards:
+ */
 void lfs_destroy(void* private_data){
 	printf("Entering destroy\n");
 	//1 gem segment i filesystemfile
 	currentBlock = SEGMENT_SIZE-numberOfNodes;
 	segmentCtrl();
-
-
-
-
-
+	
 	//2 free memory
 	llClean(head);
 
-
-
-
-
-
-
-
-
-
-	fclose(masterInfo);
+	fclose(masterinfo);
 	fclose(disk);
 	printf("Exiting lfs_destroy\n");
 }
 
+// Find the requested node and returns the attributes of the node:
 int lfs_getattr( const char *path, struct stat *stbuf ) {
 	printf("Entering lfs_getattr\n");
 
@@ -104,6 +95,7 @@ int lfs_getattr( const char *path, struct stat *stbuf ) {
 	return 0;
 }
 
+// Read the directory by finding the requested node from a given path and then prints out its "childrens" names:
 int lfs_readdir( const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi ) {
 	printf("Entering lfs_readdir\n");
 
@@ -129,6 +121,7 @@ int lfs_readdir( const char *path, void *buf, fuse_fill_dir_t filler, off_t offs
 	return 0;
 }
 
+// Creates a file at given path:
 int lfs_createfile(const char* path, mode_t mode, dev_t dev){
 	printf("Entering lfs_createfile\n");
 	createNode(path, 1);
@@ -136,6 +129,7 @@ int lfs_createfile(const char* path, mode_t mode, dev_t dev){
 	return 0;
 }
 
+// Creates a directory at a given path:
 int lfs_createdir(const char *path, mode_t mode){
 	printf("Entering lfs_createdir\n");
 	createNode(path, 0);
@@ -144,6 +138,7 @@ int lfs_createdir(const char *path, mode_t mode){
 	return 0;
 }
 
+// Removes a file at a given path:
 int lfs_removefile(const char* path){
 	printf("Entering lfs_removefile\n");
 	removeNode(path, 1);
@@ -152,6 +147,7 @@ int lfs_removefile(const char* path){
 	return 0;
 }
 
+// Removes a directory at a given path:
 int lfs_removedir(const char *path){
 	printf("Entering lfs_removedir\n");
 	removeNode(path, 0);
@@ -159,6 +155,8 @@ int lfs_removedir(const char *path){
 
 	return 0;
 }
+
+// Resizes a file at a given path:
 int lfs_truncate(const char *path, off_t offset) {
 	printf("Entering lfs_truncate\n");
 	(void)offset;
@@ -185,7 +183,7 @@ int lfs_truncate(const char *path, off_t offset) {
 	return 0;
 }
 
-
+// Opens a file at a given path:
 int lfs_open( const char *path, struct fuse_file_info *fi ) {
 	printf("Entering lfs_open\n");
 	printf("open: (path=%s)\n", path);
@@ -198,6 +196,7 @@ int lfs_open( const char *path, struct fuse_file_info *fi ) {
 	return 0;
 }
 
+// Reads a file at a given path:
 int lfs_read( const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi ) {
    	printf("Entering lfs_read\n");
 
@@ -225,14 +224,14 @@ int lfs_read( const char *path, char *buf, size_t size, off_t offset, struct fus
 	return amount_read;
 }
 
-//Nothing to do here
+//Does literally nothing!:
 int lfs_release(const char *path, struct fuse_file_info *fi) {
 	printf("Entering lfs_release\n");
 	printf("Exiting lfs_release\n");
 	return 0;
 }
 
-
+// Writes to a file at a given path:
 int lfs_write(const char *path, const char *content, size_t content_length, off_t offset, struct fuse_file_info *fi){
 	printf("Entering lfs_write\n");
 	struct treeNode* node = (struct treeNode*) fi->fh;
@@ -290,6 +289,7 @@ int lfs_write(const char *path, const char *content, size_t content_length, off_
 	return currentc;
 }
 
+// Initalizes the filesystem:
 int main( int argc, char *argv[] ) {
 	printf("Entering main\n");
 	init();
