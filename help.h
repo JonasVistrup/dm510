@@ -314,7 +314,7 @@ int createNode(const char* path, int isFile){
 	if(split.ss == NULL){
 		printf("Exiting createNode split == NULL\n");
 
-		return -1;
+		return -EPERM;
 	}
 
 	struct treeNode* node = root;
@@ -400,7 +400,7 @@ int removeNode(const char* path, int isFile){
 
 	if(split.ss == NULL){
 		printf("Exiting removeNode split == NULL\n");
-		return -1;
+		return -EPERM;
 	}
 
 	int k;
@@ -422,11 +422,11 @@ int removeNode(const char* path, int isFile){
 	}
 	if(i == 100){
 		printf("Exiting removeNode: i == 100\n");
-		return -1;
+		return -ENOENT;
 	}
 	if(current->dict[i] == NULL){
 		printf("Exiting removeNode: dict[i] == NULL");
-		return -1;
+		return -ENOENT;
 	}
 
 	if(isFile){
@@ -440,16 +440,16 @@ int removeNode(const char* path, int isFile){
 		free(current->dict[i]);
 		current->dict[i] = NULL;
 
-        }else if(current->dict[0]->dict[0] != NULL){
+        }else if(current->dict[i]->dict[0] != NULL){
 		printf("Error: directory is not empty\n");
 		printf("printing current->name:   %s\n", current->name);
 		printf("printing node->name:  %s\n", current->dict[0]->name);
 		printf("Exiting removeNode: current->dict[0] != NULL\n");
 
-		return -1;
+		return -ENOTEMPTY;
 
 	} else {
-		free(current->dict[0]);
+		free(current->dict[i]);
 		current->dict[i] = NULL;
 	}
 	numberOfNodes--;
@@ -635,7 +635,7 @@ int init(){
 		if(!(masterInfo = fopen("MasterInfo","w+b"))){
 			printf("Exiting init: master = fopen returns error\n");
 
-			return -1;
+			return -EIO;
 		}
 		currentSeg = 0;
 		cleanerSeg = 0;
@@ -660,7 +660,7 @@ int init(){
 		if(!(disk = fopen("FileSystemFile","w+b"))){
 			printf("Exiting init: disk = fopen returns error\n");
 
-			return -1;
+			return -EIO;
 		}
 		numberOfNodes = 1;
 		root = (struct treeNode*) malloc(sizeof(struct treeNode));

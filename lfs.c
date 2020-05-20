@@ -106,7 +106,7 @@ int lfs_readdir( const char *path, void *buf, fuse_fill_dir_t filler, off_t offs
 	struct treeNode* node = findNode(path);
 	if(node == NULL){
 		printf("Node is NULL\n");
-		return -1;
+		return -ENOENT;
 	}
 
 
@@ -126,36 +126,34 @@ int lfs_readdir( const char *path, void *buf, fuse_fill_dir_t filler, off_t offs
 // Creates a file at given path:
 int lfs_createfile(const char* path, mode_t mode, dev_t dev){
 	printf("Entering lfs_createfile\n");
-	createNode(path, 1);
+	int retVal = createNode(path, 1);
 	printf("Exiting lfs_createfile\n");
-	return 0;
+	return retVal;
 }
 
 // Creates a directory at a given path:
 int lfs_createdir(const char *path, mode_t mode){
 	printf("Entering lfs_createdir\n");
-	createNode(path, 0);
+	int retVal = createNode(path, 0);
 	printf("Exiting lfs_creatdir\n");
-
-	return 0;
+	return retVal;
 }
 
 // Removes a file at a given path:
 int lfs_removefile(const char* path){
 	printf("Entering lfs_removefile\n");
-	removeNode(path, 1);
+	int retVal = removeNode(path, 1);
 	printf("Exiting lfs_removefile\n");
-
-	return 0;
+	return retVal;
 }
 
 // Removes a directory at a given path:
 int lfs_removedir(const char *path){
 	printf("Entering lfs_removedir\n");
-	removeNode(path, 0);
+	int retVal = removeNode(path, 0);
 	printf("Exiting lfs_removedir\n");
 
-	return 0;
+	return retVal;
 }
 
 // Resizes a file at a given path:
@@ -165,7 +163,7 @@ int lfs_truncate(const char *path, off_t offset) {
 
 	struct treeNode* node = findNode(path);
 	if(node == NULL){
-		return -1;
+		return -ENOENT;
 	}
 	for(int i=0; i<128; i++){
 		if(node->inode.plist->p[i] != NULL){
