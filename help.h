@@ -381,9 +381,7 @@ int createNode(const char* path, int isFile){
 		node->dict[j] = newDir;
 	}
 	numberOfNodes++;
-
-	//free(split.ss);
-	//freeStringArray(split);
+	segmentCtrl();
 	printf("Exiting createNode\n");
 
 	return 0;
@@ -487,10 +485,10 @@ struct treeNode* findNode(const char* path){
 	int j;
 
 	for(int i = 0; i < split.length; i++){
-		printf("Split[%d] = %s\n", i, split.ss[i].s);
+//		printf("Split[%d] = %s\n", i, split.ss[i].s);
 
 		for(j = 0; j < 100 && node->dict[j] != NULL && strcmp(node->dict[j]->name, split.ss[i].s); j++){
-			printf("dict[%d] = %s\n", j, node->dict[j]->name);
+//			printf("dict[%d] = %s\n", j, node->dict[j]->name);
 		}
 
 		if(j == 100){
@@ -571,6 +569,7 @@ void restoreDir(struct int_Node* node, struct treeNode* tNode){
 
 	for(int i = 0; i<100 && node->dict[i] != -1; i++){
 		numberOfNodes++;
+		segmentCtrl();
                 struct int_Node* intNode = (struct int_Node*) seekNfind( (node->dict[i] / 65536), (node->dict[i] % 65536));
                 struct treeNode* treeNode = (struct treeNode*) malloc(sizeof(struct treeNode));
 
@@ -610,6 +609,7 @@ int restoreStructure(){
 
 	for(int i=0; i<100 && node->dict[i] != -1; i++){
 		numberOfNodes++;
+		segmentCtrl();
 		struct int_Node* intNode = (struct int_Node*) seekNfind( (node->dict[i] / 65536), (node->dict[i] % 65536));
 		struct treeNode* treeNode = (struct treeNode*) malloc(sizeof(struct treeNode));
 

@@ -212,8 +212,10 @@ int lfs_read( const char *path, char *buf, size_t size, off_t offset, struct fus
 			for(int j = remainder; j<BLOCK_SIZE && amount_read<size; j++){
 				if(node->inode.plist->p[i][j]!='\0'){
 					buf[amount_read] = node->inode.plist->p[i][j];
-					printf("char =%c\n",node->inode.plist->p[i][j]);
+//					printf("char =%c\n",node->inode.plist->p[i][j]);
 					amount_read++;
+				}else{
+					size--;
 				}
 			}
 		}
