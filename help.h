@@ -94,6 +94,27 @@ ll* head;		//Head of linkedlist
 int segmentCtrl();	//Only function need to be declared, all other follows a hierarchi
 
 
+//Recursivly frees the nodes in the treestructure
+void freeTree(struct treeNode* current){
+	if(current != NULL){
+		if(current->isFile){
+			for(int i=0; i<128; i++){
+				if(current->inode.plist->p[i] !=NULL){
+					free(current->inode.plist->p[i]);
+				}
+			}
+			free(current->inode.plist);
+			free(current);
+		}else{
+			for(int i=0; i<100; i++){
+				freeTree(current->dict[i]);
+			}
+			free(current);
+		}
+	}
+}
+
+
 //Recursivly frees the allocated pointers in the LinkedList, and frees the LinkedList
 void llClean(ll* current){
 	if(current != NULL){
