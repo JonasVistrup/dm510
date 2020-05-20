@@ -251,6 +251,7 @@ int reverseTree(struct treeNode* current){
 	(*segment)[currentBlock].node = *node;
 	free(node);
 	currentBlock++;
+	segmentCtrl();
 	printf("Exiting reverseTree\n");
 
 	return currentSeg * 65536 + currentBlock -1;
