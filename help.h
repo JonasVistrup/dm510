@@ -485,10 +485,10 @@ struct treeNode* findNode(const char* path){
 	int j;
 
 	for(int i = 0; i < split.length; i++){
-//		printf("Split[%d] = %s\n", i, split.ss[i].s);
+		printf("Split[%d] = %s\n", i, split.ss[i].s);
 
 		for(j = 0; j < 100 && node->dict[j] != NULL && strcmp(node->dict[j]->name, split.ss[i].s); j++){
-//			printf("dict[%d] = %s\n", j, node->dict[j]->name);
+			printf("dict[%d] = %s\n", j, node->dict[j]->name);
 		}
 
 		if(j == 100){
@@ -502,7 +502,6 @@ struct treeNode* findNode(const char* path){
 		node = node->dict[j];
 	}
 
-	//free(split.ss);
 	//freeStringArray(split); //HAVENT TESTED THIS ONE, BUT ASUMES IT KILLS YOUR DOG OR SOMETHING
 
 	printf("Exiting findNode\n");
@@ -518,7 +517,7 @@ void* seekNfind(int segment, int block){
 	if(fseek(disk, offset, SEEK_SET)){
 		printf("fseek failed, offset = %d\n",offset);
 	}
-	int written = fread(local, BLOCK_SIZE, 1, disk);//check if written is 512 bytes
+	int written = fread(local, BLOCK_SIZE, 1, disk);
 	if(written != 1){
 		printf("Write fail, written=%d\n",written);
 	}
