@@ -87,7 +87,7 @@ int lfs_getattr( const char *path, struct stat *stbuf ) {
 	}else{
 		int i = 0;
 
-		while(node->dict[i] != NULL){
+		while(i<100 && node->dict[i] != NULL){
 			i++;
 		}
 		stbuf->st_nlink = i + 2;
