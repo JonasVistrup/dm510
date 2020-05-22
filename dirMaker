@@ -1,0 +1,2 @@
+mkdir fullDir;
+for((i=1;i<=101;i++)); do mkdir fullDir/dir$i; done;

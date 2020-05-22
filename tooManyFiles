@@ -1,0 +1,1 @@
+for((i=1; i<=50; i++)); do mkdir dir$i; for((j=1; j<=100; j++)); do touch dir$i/file$j; done; done;
